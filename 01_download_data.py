@@ -5,17 +5,26 @@ Step 1: Download Data
 Downloads all required data files for the fire resource analysis.
 
 Usage:
-    python scripts/01_download_data.py
+    python 01_download_data.py
 
 Output:
     raw_data/afd_incidents_2022_2024.csv
-    raw_data/afd_incidents_2018_2021.csv
     raw_data/afd_response_areas.geojson
     raw_data/census_population.csv
     raw_data/census_housing.csv
     raw_data/census_year_built.csv
     raw_data/fire_stations.geojson
-    raw_data/travis_county_tracts.geojson
+    raw_data/tl_2023_48_tract.zip
+
+Note on Historical Data (2018-2021):
+    The AFD Fire Incidents 2018-2021 dataset (formerly at dataset ID j9w8-x2vu)
+    was removed from the Austin Open Data Portal and is no longer available for
+    download. This analysis uses only 2022-2024 incident data.
+
+    For historical incident data, consider:
+    - NFIRS (National Fire Incident Reporting System) data from USFA:
+      https://www.usfa.fema.gov/nfirs/data/
+    - Filing a public records request with Austin Fire Department
 """
 
 import os
@@ -92,27 +101,22 @@ def main():
     results = {}
     
     # 1. Fire Incidents 2022-2024
-    results['incidents_recent'] = download_file(
+    # This is the only AFD incident dataset currently available on Austin Open Data.
+    # The 2018-2021 dataset (j9w8-x2vu) was removed from the portal.
+    results['incidents'] = download_file(
         "https://data.austintexas.gov/api/views/v5hh-nyr8/rows.csv?accessType=DOWNLOAD",
         "raw_data/afd_incidents_2022_2024.csv",
         "AFD Fire Incidents 2022-2024"
     )
-    
-    # 2. Fire Incidents 2018-2021
-    results['incidents_historical'] = download_file(
-        "https://data.austintexas.gov/api/views/j9w8-x2vu/rows.csv?accessType=DOWNLOAD",
-        "raw_data/afd_incidents_2018_2021.csv",
-        "AFD Fire Incidents 2018-2021"
-    )
-    
-    # 3. AFD Response Areas
+
+    # 2. AFD Response Areas
     results['response_areas'] = download_file(
         "https://services.arcgis.com/0L95CJ0VTaxqcmED/arcgis/rest/services/BOUNDARIES_afd_response_areas/FeatureServer/0/query?where=1=1&outFields=*&outSR=4326&f=geojson",
         "raw_data/afd_response_areas.geojson",
         "AFD Response Area Boundaries"
     )
     
-    # 4. Census Population
+    # 3. Census Population (ACS 5-Year)
     results['census_population'] = download_census_api(
         "B01003",
         ["B01003_001E", "NAME"],
@@ -120,7 +124,7 @@ def main():
         "Census Population by Tract (Travis County)"
     )
     
-    # 5. Census Housing Units by Type
+    # 4. Census Housing Units by Type (ACS 5-Year)
     housing_vars = ["B25024_001E"]  # Total
     housing_vars += [f"B25024_{str(i).zfill(3)}E" for i in range(2, 12)]  # Breakdown
     housing_vars += ["NAME"]
@@ -132,7 +136,7 @@ def main():
         "Census Housing Units by Type (Travis County)"
     )
 
-    # 6. Census Year Structure Built (B25034)
+    # 5. Census Year Structure Built (ACS 5-Year, B25034)
     year_built_vars = [
         "B25034_001E",  # Total
         "B25034_002E",  # Built 2020 or later
@@ -155,14 +159,14 @@ def main():
         "Census Year Structure Built (Travis County)"
     )
 
-    # 7. Fire Station Locations (from ArcGIS)
+    # 6. Fire Station Locations (City of Austin ArcGIS)
     results['fire_stations'] = download_file(
         "https://services.arcgis.com/0L95CJ0VTaxqcmED/arcgis/rest/services/LOCATION_fire_stations/FeatureServer/0/query?where=1=1&outFields=*&outSR=4326&f=geojson",
         "raw_data/fire_stations.geojson",
         "Fire Station Locations"
     )
 
-    # 8. Census Tract Boundaries (try Census Reporter first, then TIGER)
+    # 7. Census Tract Boundaries (TIGER/Line Shapefiles)
     results['tract_boundaries'] = download_file(
         "https://www2.census.gov/geo/tiger/TIGER2023/TRACT/tl_2023_48_tract.zip",
         "raw_data/tl_2023_48_tract.zip",
@@ -182,14 +186,11 @@ def main():
     print("NEXT STEPS")
     print("="*60)
     print("""
-1. If tract boundaries downloaded as ZIP, unzip:
-   unzip raw_data/tl_2023_48_tract.zip -d raw_data/
+1. Unzip the tract boundaries:
+   unzip raw_data/tl_2023_48_tract.zip -d raw_data/tl_2023_48_tract
 
-2. Filter Texas tracts to Travis County only (in QGIS or Python):
-   Keep only COUNTYFP = '453'
-
-3. Run the next script:
-   python scripts/02_clean_incidents.py
+2. Run the data cleaning script:
+   python 02_clean_incidents.py
 """)
     
     return all(results.values())

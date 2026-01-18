@@ -26,19 +26,26 @@ The NFIRS (National Fire Incident Reporting System) data must be downloaded manu
 2. Download the annual Public Data Release files (2018-2021)
 3. Extract to `raw_data/nfirs/YYYY/` directories
 
+### Note on Historical Data
+
+The AFD Fire Incidents 2018-2021 dataset was removed from the Austin Open Data Portal
+and is no longer available for automatic download. This analysis uses 2022-2024 data only.
+
+For historical data, you can file a public records request with the Austin Fire Department.
+
 ### Directory Structure After Setup
 
 ```
 raw_data/
 ├── afd_incidents_2022_2024.csv    # From download script
-├── afd_incidents_2018_2021.csv    # From download script
 ├── afd_response_areas.geojson     # From download script
-├── census_*.csv                   # From download script
+├── fire_stations.geojson          # From download script
+├── census_population.csv          # From download script
+├── census_housing.csv             # From download script
+├── census_year_built.csv          # From download script
+├── tl_2023_48_tract.zip           # From download script (Census tract boundaries)
 └── nfirs/                         # Manual download (optional)
-    ├── 2018/
-    ├── 2019/
-    ├── 2020/
-    └── 2021/
+    └── ...
 ```
 
 ## Quick Start
@@ -79,10 +86,13 @@ fire-incident-analysis/
 
 | Data | Source |
 |------|--------|
-| Fire Incidents (2018-2024) | Austin Open Data Portal |
-| Response Area Boundaries | City of Austin ArcGIS |
-| Population by Tract | Census ACS 5-Year (B01003) |
-| Housing Units by Type | Census ACS 5-Year (B25024) |
+| Fire Incidents (2022-2024) | [Austin Open Data Portal](https://data.austintexas.gov/Public-Safety/AFD-Fire-Incidents-2022-2024/v5hh-nyr8) |
+| Response Area Boundaries | [City of Austin ArcGIS](https://services.arcgis.com/0L95CJ0VTaxqcmED/arcgis/rest/services/BOUNDARIES_afd_response_areas/FeatureServer) |
+| Fire Station Locations | [City of Austin ArcGIS](https://services.arcgis.com/0L95CJ0VTaxqcmED/arcgis/rest/services/LOCATION_fire_stations/FeatureServer) |
+| Population by Tract | [Census ACS 5-Year (B01003)](https://api.census.gov/data/2022/acs/acs5) |
+| Housing Units by Type | [Census ACS 5-Year (B25024)](https://api.census.gov/data/2022/acs/acs5) |
+| Year Structure Built | [Census ACS 5-Year (B25034)](https://api.census.gov/data/2022/acs/acs5) |
+| Census Tract Boundaries | [TIGER/Line Shapefiles](https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html) |
 
 ## Key Outputs
 

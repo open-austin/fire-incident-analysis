@@ -20,31 +20,29 @@ import numpy as np
 
 SOURCES = {
     # Austin Open Data Portal (Socrata API)
+    # Note: The 2018-2021 dataset (j9w8-x2vu) was removed from the portal and is
+    # no longer available. Only 2022-2024 data can be fetched automatically.
     "fire_incidents_2022_2024": {
         "url": "https://data.austintexas.gov/resource/v5hh-nyr8.json",
         "csv_url": "https://data.austintexas.gov/api/views/v5hh-nyr8/rows.csv?accessType=DOWNLOAD",
         "description": "AFD Fire Incidents 2022-2024",
-        "fields": ["incident_number", "calendaryear", "month", "incdate", 
+        "fields": ["incident_number", "calendaryear", "month", "incdate",
                    "call_type", "problem", "responsearea", "jurisdiction",
                    "prioritydescription", "council_district", "location"]
     },
-    "fire_incidents_2018_2021": {
-        "url": "https://data.austintexas.gov/resource/j9w8-x2vu.json",
-        "csv_url": "https://data.austintexas.gov/api/views/j9w8-x2vu/rows.csv?accessType=DOWNLOAD",
-        "description": "AFD Fire Incidents 2018-2021"
-    },
-    "fire_stations": {
-        "url": "https://data.austintexas.gov/resource/szku-46rx.json",
-        "description": "Austin Fire Station Locations"
-    },
-    
+
     # ArcGIS FeatureServer (City of Austin GIS)
     "afd_response_areas": {
         "url": "https://services.arcgis.com/0L95CJ0VTaxqcmED/arcgis/rest/services/BOUNDARIES_afd_response_areas/FeatureServer/0",
         "query_url": "https://services.arcgis.com/0L95CJ0VTaxqcmED/arcgis/rest/services/BOUNDARIES_afd_response_areas/FeatureServer/0/query",
         "description": "AFD Response Area Boundaries"
     },
-    
+    "fire_stations": {
+        "url": "https://services.arcgis.com/0L95CJ0VTaxqcmED/arcgis/rest/services/LOCATION_fire_stations/FeatureServer/0",
+        "query_url": "https://services.arcgis.com/0L95CJ0VTaxqcmED/arcgis/rest/services/LOCATION_fire_stations/FeatureServer/0/query",
+        "description": "Austin Fire Station Locations"
+    },
+
     # Census API
     "census_population": {
         "base_url": "https://api.census.gov/data/2022/acs/acs5",
