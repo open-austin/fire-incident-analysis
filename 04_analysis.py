@@ -793,7 +793,7 @@ def main():
         print(f"✓ Saved: outputs/structure_fires_housing_pivot.csv")
         print(f"✓ Saved: outputs/structure_fires_urban_pivot.csv")
 
-    with open("outputs/statistical_tests.txt", 'w') as f:
+    with open("outputs/statistical_tests.txt", 'w', encoding='utf-8') as f:
         f.write(test_results)
     print(f"✓ Saved: outputs/statistical_tests.txt")
     

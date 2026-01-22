@@ -37,6 +37,10 @@ os.makedirs("processed_data", exist_ok=True)
 os.makedirs("outputs", exist_ok=True)
 
 def download_file(url, filename, description):
+    if os.path.isfile(filename):
+        print("File already exists, skipping download.")
+        return True
+    
     """Download a file with progress indication"""
     print(f"\n{'='*60}")
     print(f"Downloading: {description}")
@@ -61,6 +65,10 @@ def download_file(url, filename, description):
 
 
 def download_census_api(table, variables, filename, description):
+    if os.path.isfile(filename):
+        print("File already exists, skipping download.")
+        return True
+    
     """Download data from Census API"""
     print(f"\n{'='*60}")
     print(f"Downloading: {description}")

@@ -29,6 +29,7 @@ import pandas as pd
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
 import os
 import warnings
 warnings.filterwarnings('ignore')
@@ -56,13 +57,30 @@ def load_data():
     return ra, summary_urban, summary_housing
 
 
-def create_choropleth_map(gdf, column, title, filename, colormap='YlOrRd'):
-    """Create an interactive choropleth map with folium"""
+def create_choropleth_map(gdf, column, title, filename, colormap='YlOrRd', scale='linear'):
+    """
+    Create an interactive choropleth map with folium.
+    
+    Parameters:
+    -----------
+    gdf : GeoDataFrame
+        GeoDataFrame containing the geographic data
+    column : str
+        Column name to visualize
+    title : str
+        Title for the map legend
+    filename : str
+        Output filename
+    colormap : str
+        Folium colormap name (default: 'YlOrRd')
+    scale : str
+        Color scale type: 'linear' or 'log' (default: 'linear')
+    """
     if not HAS_FOLIUM:
         print(f"  Skipping {filename} (folium not installed)")
         return
     
-    print(f"  Creating: {filename}")
+    print(f"  Creating: {filename} (scale: {scale})")
     
     # Center on Austin
     center_lat = gdf.geometry.centroid.y.mean()
@@ -77,16 +95,25 @@ def create_choropleth_map(gdf, column, title, filename, colormap='YlOrRd'):
         print(f"    Warning: No valid data for {column}")
         return
     
+    # Apply scaling transformation
+    if scale == 'log':
+        # Create a copy to avoid modifying original data
+        data_for_scale = valid_gdf[column].copy()
+        valid_gdf[f'{column}_scaled'] = np.log10(data_for_scale)
+        scale_column = f'{column}_scaled'
+    else:
+        scale_column = column
+    
     # Create choropleth
     folium.Choropleth(
         geo_data=valid_gdf.__geo_interface__,
         data=valid_gdf,
-        columns=['response_area_id', column],
+        columns=['response_area_id', scale_column],
         key_on='feature.properties.response_area_id',
         fill_color=colormap,
         fill_opacity=0.7,
         line_opacity=0.2,
-        legend_name=title,
+        legend_name=f'{title} ({scale.capitalize()} Scale)',
         nan_fill_color='white'
     ).add_to(m)
     
@@ -974,7 +1001,8 @@ def main():
             ra, 
             'incidents_per_1000_pop',
             'Fire Incidents per 1,000 Population',
-            'map_incidents_per_capita.html'
+            'map_incidents_per_capita.html',
+            scale = 'log',
         )
         
         create_categorical_map(
