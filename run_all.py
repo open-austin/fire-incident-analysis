@@ -41,6 +41,7 @@ REQUIRED_PACKAGES = [
     "matplotlib",
     "seaborn",
     "scipy",
+    "numpy",
 ]
 
 
