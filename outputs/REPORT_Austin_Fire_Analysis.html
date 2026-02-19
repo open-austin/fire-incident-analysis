@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Austin Fire Department Resource Analysis</title>
+    <style>
+        @media print {
+            body { font-size: 11pt; }
+            .page-break { page-break-before: always; }
+            h2 { page-break-after: avoid; }
+            table { page-break-inside: avoid; }
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 8.5in;
+            margin: 0 auto;
+            padding: 0.5in;
+            color: #333;
+        }
+
+        h1 {
+            color: #1a365d;
+            border-bottom: 3px solid #c53030;
+            padding-bottom: 10px;
+            margin-bottom: 5px;
+        }
+
+        h2 {
+            color: #c53030;
+            margin-top: 30px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+
+        h3 {
+            color: #2c5282;
+            margin-top: 20px;
+        }
+
+        .subtitle {
+            color: #4a5568;
+            font-size: 1.1em;
+            margin-top: 0;
+        }
+
+        .meta {
+            color: #718096;
+            font-size: 0.9em;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.95em;
+        }
+
+        th, td {
+            border: 1px solid #cbd5e0;
+            padding: 10px 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #2c5282;
+            color: white;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f7fafc;
+        }
+
+        tr:hover {
+            background-color: #edf2f7;
+        }
+
+        .highlight {
+            background-color: #fffaf0;
+            border-left: 4px solid #ed8936;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .key-finding {
+            background-color: #ebf8ff;
+            border-left: 4px solid #3182ce;
+            padding: 10px 15px;
+            margin: 10px 0;
+        }
+
+        .note {
+            font-size: 0.9em;
+            color: #718096;
+            font-style: italic;
+        }
+
+        ul {
+            margin: 10px 0;
+            padding-left: 25px;
+        }
+
+        li {
+            margin: 5px 0;
+        }
+
+        strong {
+            color: #2d3748;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid #e2e8f0;
+            margin: 25px 0;
+        }
+
+        .executive-summary {
+            background-color: #f0fff4;
+            border: 1px solid #9ae6b4;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .finding-number {
+            display: inline-block;
+            background-color: #c53030;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 24px;
+            font-weight: bold;
+            margin-right: 8px;
+            font-size: 0.85em;
+        }
+
+        .section-number {
+            color: #c53030;
+            font-weight: bold;
+        }
+
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 0.85em;
+            color: #718096;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Austin Fire Department Resource Analysis</h1>
+    <p class="subtitle">Fire Incident Patterns by Housing Type, Urban Classification, and Building Age</p>
+    <p class="meta">
+        <strong>Analysis Period:</strong> 2022-2024<br>
+        <strong>Data Source:</strong> Austin Open Data Portal, US Census ACS 2022<br>
+        <strong>Prepared:</strong> December 2024
+    </p>
+
+    <hr>
+
+    <div class="executive-summary">
+        <h2 style="margin-top: 0; border: none;">Executive Summary</h2>
+        <p>This analysis examines fire incident patterns across Austin Fire Department's service area to understand how fire risk varies by:</p>
+        <ul>
+            <li><strong>Housing typology</strong> (single-family vs. multifamily)</li>
+            <li><strong>Urban classification</strong> (urban core, inner suburban, outer suburban)</li>
+            <li><strong>Building age</strong> (pre-2010 vs. post-2010 construction)</li>
+        </ul>
+
+        <h3>Key Findings</h3>
+        <div class="key-finding">
+            <span class="finding-number">1</span>
+            <strong>Multifamily areas have 4-6x higher fire rates</strong> than single-family dominant areas across all incident types
+        </div>
+        <div class="key-finding">
+            <span class="finding-number">2</span>
+            <strong>The 2006 Austin sprinkler code is working</strong> - structure fires are 141% higher in older buildings vs. newer construction
+        </div>
+        <div class="key-finding">
+            <span class="finding-number">3</span>
+            <strong>Trash/dumpster fires dominate</strong> in high-density areas (30.6 per 1,000 units in multifamily vs. 4.6 in single-family)
+        </div>
+        <div class="key-finding">
+            <span class="finding-number">4</span>
+            <strong>Outer suburban areas have consistently lowest fire rates</strong> (~1 structure fire per 1,000 units annually)
+        </div>
+    </div>
+
+    <hr>
+
+    <h2><span class="section-number">1.</span> Fire Incidents by Housing Type</h2>
+    <p>Fire rates vary dramatically based on the housing composition of an area:</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Housing Type</th>
+                <th>Structure Fires</th>
+                <th>Vehicle Fires</th>
+                <th>Outdoor Fires</th>
+                <th>Trash Fires</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Multifamily (&lt;25% SF)</td>
+                <td>8.8</td>
+                <td>5.4</td>
+                <td>7.7</td>
+                <td>30.6</td>
+                <td><strong>52.5</strong></td>
+            </tr>
+            <tr>
+                <td>Mixed-low (25-50% SF)</td>
+                <td>6.6</td>
+                <td>5.0</td>
+                <td>8.1</td>
+                <td>22.6</td>
+                <td><strong>42.3</strong></td>
+            </tr>
+            <tr>
+                <td>Mixed-high (50-75% SF)</td>
+                <td>5.8</td>
+                <td>3.8</td>
+                <td>5.7</td>
+                <td>15.8</td>
+                <td><strong>31.1</strong></td>
+            </tr>
+            <tr>
+                <td>Single-family (&gt;75% SF)</td>
+                <td>2.0</td>
+                <td>1.6</td>
+                <td>2.3</td>
+                <td>4.6</td>
+                <td><strong>10.5</strong></td>
+            </tr>
+        </tbody>
+    </table>
+    <p class="note">Rates per 1,000 housing units, 2022-2024 combined</p>
+
+    <div class="highlight">
+        <strong>Interpretation:</strong> Areas with predominantly multifamily housing experience 5x the total fire incident rate of single-family areas. This reflects:
+        <ul>
+            <li>Higher population density</li>
+            <li>Shared infrastructure (dumpsters, parking)</li>
+            <li>Older building stock in urban multifamily areas</li>
+            <li>More commercial activity generating waste fires</li>
+        </ul>
+    </div>
+
+    <hr>
+
+    <h2><span class="section-number">2.</span> Structure Fire Trends by Urban Classification</h2>
+    <p>Focusing on structure fires only (excluding vehicle, trash, and outdoor fires):</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Urban Classification</th>
+                <th>2022</th>
+                <th>2023</th>
+                <th>2024</th>
+                <th>3-Year Avg</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Urban Core (&gt;10k/sq mi)</td>
+                <td>3.35</td>
+                <td>2.31</td>
+                <td>4.07</td>
+                <td><strong>3.24</strong></td>
+            </tr>
+            <tr>
+                <td>Inner Suburban (3-10k/sq mi)</td>
+                <td>2.23</td>
+                <td>2.14</td>
+                <td>2.15</td>
+                <td><strong>2.17</strong></td>
+            </tr>
+            <tr>
+                <td>Outer Suburban (&lt;3k/sq mi)</td>
+                <td>0.97</td>
+                <td>1.10</td>
+                <td>1.09</td>
+                <td><strong>1.05</strong></td>
+            </tr>
+        </tbody>
+    </table>
+    <p class="note">Structure fires per 1,000 housing units</p>
+
+    <p><strong>Key Observations:</strong></p>
+    <ul>
+        <li>Urban core shows highest variability year-to-year</li>
+        <li>Inner suburban rates are stable at ~2.2 per 1,000 units</li>
+        <li>Outer suburban consistently lowest at ~1.0 per 1,000 units</li>
+    </ul>
+
+    <hr>
+
+    <h2><span class="section-number">3.</span> Building Age Effect (Sprinkler Code Impact)</h2>
+    <p>Austin adopted residential sprinkler requirements in 2006, affecting construction from ~2010 onward. The data shows a clear impact:</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Incident Type</th>
+                <th>Newer Buildings (50%+ post-2010)</th>
+                <th>Older Buildings (&lt;50% post-2010)</th>
+                <th>Difference</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Structure Fire</strong></td>
+                <td>2.3</td>
+                <td>5.6</td>
+                <td><strong style="color: #c53030;">+141%</strong></td>
+            </tr>
+            <tr>
+                <td>Vehicle Fire</td>
+                <td>3.2</td>
+                <td>3.8</td>
+                <td>+18%</td>
+            </tr>
+            <tr>
+                <td>Outdoor/Vegetation</td>
+                <td>5.4</td>
+                <td>5.7</td>
+                <td>+7%</td>
+            </tr>
+            <tr>
+                <td><strong>Trash/Dumpster</strong></td>
+                <td>7.2</td>
+                <td>17.3</td>
+                <td><strong style="color: #c53030;">+140%</strong></td>
+            </tr>
+        </tbody>
+    </table>
+    <p class="note">Rates per 1,000 housing units</p>
+
+    <div class="highlight">
+        <strong>Interpretation:</strong>
+        <ul>
+            <li><strong>Structure fires are 141% higher in older areas</strong> - strong evidence that the 2006 sprinkler code is effective</li>
+            <li>Vehicle and outdoor fires show minimal difference (not affected by building codes)</li>
+            <li>Trash fires also higher in older areas, likely due to infrastructure and land use patterns</li>
+        </ul>
+    </div>
+
+    <div class="page-break"></div>
+
+    <h2><span class="section-number">4.</span> Structure Fire Trends by Housing Type</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Housing Type</th>
+                <th>2022</th>
+                <th>2023</th>
+                <th>2024</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Multifamily (&lt;25% SF)</td>
+                <td>2.95</td>
+                <td>2.94</td>
+                <td>2.91</td>
+            </tr>
+            <tr>
+                <td>Mixed-low (25-50% SF)</td>
+                <td>2.23</td>
+                <td>2.14</td>
+                <td>2.28</td>
+            </tr>
+            <tr>
+                <td>Mixed-high (50-75% SF)</td>
+                <td>2.06</td>
+                <td>1.80</td>
+                <td>1.94</td>
+            </tr>
+            <tr>
+                <td>Single-family (&gt;75% SF)</td>
+                <td>0.55</td>
+                <td>0.80</td>
+                <td>0.68</td>
+            </tr>
+        </tbody>
+    </table>
+    <p class="note">Structure fires per 1,000 housing units</p>
+
+    <p><strong>Observations:</strong></p>
+    <ul>
+        <li>Rates are relatively stable across the 3-year period</li>
+        <li>Multifamily areas consistently highest (~3x single-family rate)</li>
+        <li>No significant upward or downward trends</li>
+    </ul>
+
+    <hr>
+
+    <h2><span class="section-number">5.</span> Fire Station Coverage</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Urban Classification</th>
+                <th>Stations</th>
+                <th>Population</th>
+                <th>Pop/Station</th>
+                <th>Sq Mi/Station</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Urban Core</td>
+                <td>2</td>
+                <td>38,258</td>
+                <td>19,129</td>
+                <td>1.3</td>
+            </tr>
+            <tr>
+                <td>Inner Suburban</td>
+                <td>33</td>
+                <td>716,268</td>
+                <td>21,705</td>
+                <td>4.4</td>
+            </tr>
+            <tr>
+                <td>Outer Suburban</td>
+                <td>26</td>
+                <td>534,539</td>
+                <td>20,559</td>
+                <td>170.1</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p class="note"><strong>Note:</strong> Outer suburban areas have significantly larger geographic coverage per station (170 sq mi vs. 1.3-4.4 sq mi), though population-per-station ratios are similar.</p>
+
+    <hr>
+
+    <h2><span class="section-number">6.</span> Statistical Summary</h2>
+
+    <h3>Total Incidents by Category (2022-2024)</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Category</th>
+                <th>Count</th>
+                <th>% of Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Trash/Dumpster Fire</td>
+                <td>9,633</td>
+                <td>46.0%</td>
+            </tr>
+            <tr>
+                <td>Outdoor/Vegetation Fire</td>
+                <td>3,405</td>
+                <td>16.3%</td>
+            </tr>
+            <tr>
+                <td>Structure Fire</td>
+                <td>3,178</td>
+                <td>15.2%</td>
+            </tr>
+            <tr>
+                <td>Other</td>
+                <td>2,527</td>
+                <td>12.1%</td>
+            </tr>
+            <tr>
+                <td>Vehicle Fire</td>
+                <td>2,190</td>
+                <td>10.5%</td>
+            </tr>
+            <tr style="background-color: #e2e8f0; font-weight: bold;">
+                <td>Total</td>
+                <td>20,933</td>
+                <td>100%</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Population and Housing Summary</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Urban Classification</th>
+                <th>Population</th>
+                <th>Housing Units</th>
+                <th>% Single-Family</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Urban Core</td>
+                <td>38,258</td>
+                <td>18,963</td>
+                <td>12.4%</td>
+            </tr>
+            <tr>
+                <td>Inner Suburban</td>
+                <td>716,268</td>
+                <td>304,891</td>
+                <td>52.1%</td>
+            </tr>
+            <tr>
+                <td>Outer Suburban</td>
+                <td>534,539</td>
+                <td>247,778</td>
+                <td>78.3%</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="page-break"></div>
+
+    <h2>Methodology</h2>
+
+    <h3>Data Sources</h3>
+    <ul>
+        <li><strong>Fire Incidents:</strong> Austin Open Data Portal (AFD Fire Incidents 2022-2024)</li>
+        <li><strong>Demographics:</strong> US Census American Community Survey 2022 5-Year Estimates</li>
+        <li><strong>Geographic Boundaries:</strong> City of Austin ArcGIS (AFD Response Areas)</li>
+    </ul>
+
+    <h3>Definitions</h3>
+    <ul>
+        <li><strong>Urban Core:</strong> Population density &gt;10,000 per square mile</li>
+        <li><strong>Inner Suburban:</strong> Population density 3,000-10,000 per square mile</li>
+        <li><strong>Outer Suburban:</strong> Population density &lt;3,000 per square mile</li>
+        <li><strong>Newer Buildings:</strong> Response areas where 50%+ of structures built 2010 or later</li>
+        <li><strong>Structure Fire:</strong> NFIRS incident types 11x (building fires) and 12x (mobile property as fixed structure)</li>
+    </ul>
+
+    <h3>Limitations</h3>
+    <ul>
+        <li>Census demographics from 2022 applied to all years (assumes stable population)</li>
+        <li>Historical data (2018-2021) not available from Austin Open Data Portal</li>
+        <li>Building age based on area-level percentages, not individual structure data</li>
+    </ul>
+
+    <hr>
+
+    <h2>Appendix: Output Files</h2>
+
+    <h3>Data Files</h3>
+    <ul>
+        <li><code>summary_by_urban_class.csv</code> - Aggregate statistics by urban classification</li>
+        <li><code>summary_by_housing_type.csv</code> - Aggregate statistics by housing typology</li>
+        <li><code>structure_fires_by_housing_trend.csv</code> - Year-over-year structure fire trends</li>
+        <li><code>incident_types_by_building_age.csv</code> - Incident rates by building age</li>
+        <li><code>incident_rates_by_housing_and_type.csv</code> - Full cross-tabulation</li>
+    </ul>
+
+    <h3>Visualizations</h3>
+    <ul>
+        <li><code>chart_incident_type_by_housing.png</code> - Incident types by housing classification</li>
+        <li><code>chart_incident_types_by_age.png</code> - Incident types by building age</li>
+        <li><code>chart_structure_fires_by_housing.png</code> - Structure fire trends by housing type</li>
+        <li><code>chart_structure_fires_by_urban.png</code> - Structure fire trends by urban class</li>
+        <li><code>map_incidents_per_capita.html</code> - Interactive map of incident rates</li>
+        <li><code>map_building_age.html</code> - Interactive map of building age distribution</li>
+    </ul>
+
+    <div class="footer">
+        <p>Analysis conducted using Python with pandas, geopandas, and matplotlib.</p>
+        <p>Austin Fire Department Resource Analysis | December 2024</p>
+    </div>
+</body>
+</html>

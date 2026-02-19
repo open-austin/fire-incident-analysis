@@ -1,0 +1,5 @@
+incident_type,newer_count,older_count,newer_rate_per_1000,older_rate_per_1000,pct_difference
+Structure Fire,117,2933,2.33,5.62,141.1
+Vehicle Fire,160,1960,3.19,3.76,17.8
+Outdoor/Vegetation,269,2982,5.36,5.72,6.6
+Trash/Dumpster,362,9039,7.22,17.33,140.2

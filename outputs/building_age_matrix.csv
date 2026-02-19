@@ -1,0 +1,6 @@
+urban_simple,building_age_class,population,total_incidents,structure_fires,incidents_per_1000
+Inner Suburban,Newer (50%+ post-2010),36988.86660906148,732.0,87.0,19.789738564757098
+Inner Suburban,Older (<50% post-2010),679279.2053065542,14157.0,2136.0,20.84120916613521
+Outer Suburban,Newer (50%+ post-2010),85791.52001015792,257.0,30.0,2.995634066975041
+Outer Suburban,Older (<50% post-2010),448747.74594617134,4360.0,659.0,9.715926240046219
+Urban Core,Older (<50% post-2010),38257.96730484787,621.0,122.0,16.2319130823584
