@@ -541,6 +541,88 @@ def allocate_demographics(crosswalk, census_df, response_areas_gdf, ra_id_col):
     return ra_demographics, ra
 
 
+def estimate_height_from_census(ra_demographics):
+    """
+    For response areas without zoning data (ETJ areas), estimate building
+    height from census housing mix (B25024). Also categorizes all areas
+    into height and density bands with a data source flag.
+
+    Adds columns:
+        height_data_source  - 'zoning', 'census_estimate', or 'none'
+        census_est_stories  - census-inferred avg stories (always computed)
+        height_category     - 'low_rise' (≤2.5), 'mid_rise' (2.5-5), 'high_rise' (>5)
+        density_category    - 'low_density', 'medium_density', 'high_density'
+    """
+    # Assumed typical story counts by census housing type
+    HOUSING_STORIES = {
+        'single_family': 1.5,
+        'duplex': 2.0,
+        'small_multifamily': 3.0,   # 3-19 unit buildings
+        'large_multifamily': 6.0,   # 20+ unit buildings
+        'mobile_other': 1.0,
+    }
+
+    df = ra_demographics.copy()
+
+    # --- Census-based estimate (computed for ALL areas, used as fallback) ---
+    total = df['total_units'].replace(0, float('nan'))
+    df['census_est_stories'] = (
+        df['single_family'].fillna(0) * HOUSING_STORIES['single_family'] +
+        df['duplex'].fillna(0) * HOUSING_STORIES['duplex'] +
+        df['small_multifamily'].fillna(0) * HOUSING_STORIES['small_multifamily'] +
+        df['large_multifamily'].fillna(0) * HOUSING_STORIES['large_multifamily'] +
+        df['mobile_other'].fillna(0) * HOUSING_STORIES['mobile_other']
+    ) / total
+
+    # --- Data source flag ---
+    has_zoning = df['avg_max_stories'].notna() if 'avg_max_stories' in df.columns else pd.Series(False, index=df.index)
+    has_census = df['census_est_stories'].notna()
+
+    df['height_data_source'] = 'none'
+    df.loc[has_census, 'height_data_source'] = 'census_estimate'
+    df.loc[has_zoning, 'height_data_source'] = 'zoning'
+
+    # --- Fill missing zoning values with census estimate ---
+    if 'avg_max_stories' not in df.columns:
+        df['avg_max_stories'] = float('nan')
+    missing = df['avg_max_stories'].isna()
+    df.loc[missing, 'avg_max_stories'] = df.loc[missing, 'census_est_stories']
+
+    # --- Height category ---
+    def _height_cat(stories):
+        if pd.isna(stories):
+            return 'unknown'
+        elif stories <= 2.5:
+            return 'low_rise'
+        elif stories <= 5.0:
+            return 'mid_rise'
+        else:
+            return 'high_rise'
+
+    df['height_category'] = df['avg_max_stories'].apply(_height_cat)
+
+    # --- Density category (housing units per sq mile proxy via total_units / population) ---
+    # Use multifamily percentage as density proxy since we don't have area here
+    pct_mf = df.get('pct_multifamily', pd.Series(0, index=df.index))
+    df['density_category'] = pd.cut(
+        pct_mf,
+        bins=[-1, 20, 50, 100],
+        labels=['low_density', 'medium_density', 'high_density']
+    ).astype(str).replace('nan', 'unknown')
+
+    # --- Summary ---
+    print("\nHeight estimation summary:")
+    print(f"  Zoning-based:    {(df['height_data_source'] == 'zoning').sum()} areas")
+    print(f"  Census-estimated: {(df['height_data_source'] == 'census_estimate').sum()} areas")
+    print(f"  No data:          {(df['height_data_source'] == 'none').sum()} areas")
+    print(f"\n  Height categories:")
+    print(f"    {df['height_category'].value_counts().to_string()}")
+    print(f"\n  Density categories:")
+    print(f"    {df['density_category'].value_counts().to_string()}")
+
+    return df
+
+
 def main():
     print("\n" + "#"*60)
     print("# FIRE RESOURCE ANALYSIS - CREATE SPATIAL CROSSWALK")
@@ -569,6 +651,15 @@ def main():
         ra_demographics = ra_demographics.merge(zoning_by_ra, on='response_area_id', how='left')
         ra_with_demographics = ra_with_demographics.merge(zoning_by_ra, on='response_area_id', how='left')
         print(f"\n  Zoning data merged into demographics")
+
+    # Estimate height from census for areas without zoning (ETJ) + categorize all areas
+    ra_demographics = estimate_height_from_census(ra_demographics)
+    # Sync new columns back to the geo dataframe
+    new_cols = ['census_est_stories', 'height_data_source', 'height_category', 'density_category']
+    for col in new_cols:
+        if col in ra_demographics.columns:
+            mapping = ra_demographics.set_index('response_area_id')[col]
+            ra_with_demographics[col] = ra_with_demographics['response_area_id'].map(mapping)
 
     # Save outputs
     os.makedirs("processed_data", exist_ok=True)

@@ -2,376 +2,218 @@
 
 ## Project Overview
 
-**Goal:** Test whether suburban areas in Austin consume disproportionate fire resources per capita compared to urban areas.
+**Goal:** Analyze how Austin's fire coverage demands relate to housing density, building typology, and zoning — with focus on implications of the single-stair building code and HOME initiative.
 
-**Timeline:** 4-6 weeks (part-time)  
+**Stakeholder:** District 4 Policy Analyst Timothy Bray
 **Output:** Data-backed brief for Research Hub + supporting visualizations
+**Status:** Core analysis complete; NFIRS cause analysis complete; zoning/height integration in progress
 
 ---
 
-## Phase 1: Data Acquisition (Week 1)
+## Phase 1: Data Acquisition ✅
 
 ### Task 1.1: Download Fire Incident Data
-**Time:** 1-2 hours  
-**Output:** `incidents_2018_2024.csv`
-
-```bash
-# Download via curl or browser
-curl "https://data.austintexas.gov/api/views/v5hh-nyr8/rows.csv?accessType=DOWNLOAD" \
-  -o incidents_2022_2024.csv
-
-curl "https://data.austintexas.gov/api/views/j9w8-x2vu/rows.csv?accessType=DOWNLOAD" \
-  -o incidents_2018_2021.csv
-```
+**Output:** `raw_data/afd_incidents_2022_2024.csv`
 
 **Checklist:**
-- [ ] Download 2022-2024 incidents
-- [ ] Download 2018-2021 incidents  
-- [ ] Combine into single file
-- [ ] Note: How many records total? How many have valid coordinates?
+- [x] Download 2022-2024 incidents via `01_download_data.py`
+- [x] ~~Download 2018-2021 incidents~~ — Dataset removed from Austin Open Data Portal; not available
+- [x] 2022-2024 data used as primary dataset
+
+**Note:** 2018-2021 historical data would require a public records request with AFD.
 
 ---
 
 ### Task 1.2: Download Response Area Boundaries
-**Time:** 30 min  
-**Output:** `afd_response_areas.geojson`
-
-```bash
-curl "https://services.arcgis.com/0L95CJ0VTaxqcmED/arcgis/rest/services/BOUNDARIES_afd_response_areas/FeatureServer/0/query?where=1=1&outFields=*&outSR=4326&f=geojson" \
-  -o afd_response_areas.geojson
-```
+**Output:** `raw_data/afd_response_areas.geojson`
 
 **Checklist:**
-- [ ] Download GeoJSON
-- [ ] Open in QGIS/kepler.gl to verify geometry
-- [ ] Note: How many response areas? What fields are included?
+- [x] Download GeoJSON (711 response areas)
+- [x] Verified geometry via interactive maps
 
 ---
 
 ### Task 1.3: Download Census Data
-**Time:** 1-2 hours  
-**Output:** `census_tracts_travis.csv`, `census_tracts_travis.geojson`
-
-**Option A: Census API**
-```python
-import requests
-import pandas as pd
-
-# Population by tract
-url = "https://api.census.gov/data/2022/acs/acs5"
-params = {
-    "get": "B01003_001E,NAME",
-    "for": "tract:*",
-    "in": "state:48 county:453"
-}
-response = requests.get(url, params=params)
-pop_data = pd.DataFrame(response.json()[1:], columns=response.json()[0])
-
-# Housing units by type (B25024)
-params["get"] = "B25024_001E,B25024_002E,B25024_003E,B25024_004E,B25024_005E,B25024_006E,B25024_007E,B25024_008E,B25024_009E,B25024_010E,B25024_011E,NAME"
-response = requests.get(url, params=params)
-housing_data = pd.DataFrame(response.json()[1:], columns=response.json()[0])
-```
-
-**Option B: Census Reporter**
-- https://censusreporter.org/profiles/05000US48453-travis-county-tx/
-- Download tract-level tables B01003 and B25024
-
-**Option C: TIGER Boundaries**
-```bash
-curl "https://www2.census.gov/geo/tiger/TIGER2022/TRACT/tl_2022_48_tract.zip" -o texas_tracts.zip
-unzip texas_tracts.zip
-# Filter to Travis County (COUNTYFP = 453)
-```
+**Output:** `raw_data/census_population.csv`, `raw_data/census_housing.csv`, `raw_data/census_year_built.csv`, `raw_data/tl_2023_48_tract.zip`
 
 **Checklist:**
-- [ ] Download population (B01003)
-- [ ] Download housing typology (B25024)
-- [ ] Download tract boundaries
-- [ ] Filter to Travis County
-- [ ] Create GEOID field for joining
+- [x] Download population (B01003)
+- [x] Download housing typology (B25024)
+- [x] Download year built (B25034)
+- [x] Download tract boundaries (TIGER/Line 2023)
+- [x] Filter to Travis County
 
 ---
 
 ### Task 1.4: Download Supporting Data
-**Time:** 1 hour
+**Checklist:**
+- [x] Download fire station locations → `raw_data/fire_stations.geojson`
+- [x] Download zoning districts → `raw_data/zoning.geojson` (~22k polygons)
 
-| Dataset | Source | Purpose |
-|---------|--------|---------|
-| Fire Stations | `data.austintexas.gov/resource/szku-46rx.json` | Station locations |
-| City Limits | Austin Open Data | Study boundary |
+---
+
+## Phase 2: Data Cleaning ✅
+
+### Task 2.1: Clean & Classify Incident Data
+**Script:** `02_clean_incidents.py`
+**Output:** `processed_data/incidents_clean.csv`
 
 **Checklist:**
-- [ ] Download fire station locations
-- [ ] Download city limits boundary
+- [x] Parse and clean incident records
+- [x] Classify incident types (structure, vehicle, outdoor, trash, other)
+- [x] Validate date ranges and coordinates
 
 ---
 
-## Phase 2: Data Exploration (Week 1-2)
+## Phase 3: Spatial Joins & Crosswalk ✅
 
-### Task 2.1: Explore Incident Data
-**Time:** 2-3 hours
-
-```python
-import pandas as pd
-df = pd.read_csv("incidents_2022_2024.csv")
-
-print(f"Total records: {len(df)}")
-print(f"Date range: {df['incdate'].min()} to {df['incdate'].max()}")
-print(f"Records with coordinates: {df['location'].notna().sum()}")
-print(df['problem'].value_counts().head(20))
-print(df['call_type'].value_counts())
-```
+### Task 3.1: Build Tract → Response Area Crosswalk
+**Script:** `03_create_crosswalk.py`
+**Output:** `processed_data/tract_to_response_area_crosswalk.csv`
 
 **Checklist:**
-- [ ] How many incidents total?
-- [ ] What % have valid coordinates?
-- [ ] What are the top incident types?
-- [ ] How many are structure fires vs grass/trash?
+- [x] Area-weighted interpolation (chosen over centroid method)
+- [x] Build crosswalk
+- [x] Validate population totals
 
 ---
 
-### Task 2.2: Explore Response Areas
-**Time:** 1 hour
-
-```python
-import geopandas as gpd
-gdf = gpd.read_file("afd_response_areas.geojson")
-gdf = gdf.to_crs("EPSG:32614")
-gdf["area_sq_miles"] = gdf.geometry.area / 2.59e6
-print(gdf["area_sq_miles"].describe())
-```
+### Task 3.2: Aggregate Census to Response Areas
+**Output:** `processed_data/response_area_demographics.csv`, `processed_data/response_areas_with_demographics.geojson`
 
 **Checklist:**
-- [ ] What fields identify each area?
-- [ ] What's the size distribution?
-- [ ] Do boundaries look correct?
+- [x] Allocate population
+- [x] Allocate housing units (SF, duplex, small MF, large MF, mobile/other)
+- [x] Allocate year-built categories (pre-1970, 1970-2009, 2010+)
+- [x] Calculate % SF, % MF, % new construction per area
+- [x] Sanity check totals
 
 ---
 
-### Task 2.3: Explore Census Data
-**Time:** 1 hour
+### Task 3.3: Zoning-to-Height Integration (feature/building-height-data)
+**Script:** `03_create_crosswalk.py` (new functions)
 
 **Checklist:**
-- [ ] Total population in Travis County
-- [ ] Total housing units
-- [ ] SF vs MF split
-- [ ] Any zero-population tracts?
+- [x] Map 44 Austin BASE_ZONE codes to max height/stories
+- [x] Detect vertical mixed-use (`-V`) overlays → 6-story minimum
+- [x] Area-weighted allocation of zoning to response areas
+- [x] Census housing mix fallback for 203 ETJ areas
+- [x] Coverage: 508/711 areas with zoning, 203 with census estimates, 0 with no data
+- [ ] Commit changes on `feature/building-height-data`
 
 ---
 
-## Phase 3: Spatial Joins (Week 2)
+## Phase 4: Classification ✅
 
-### Task 3.1: Join Incidents to Response Areas
-**Time:** 2 hours  
-**Output:** `incidents_with_response_area.csv`
+### Task 4.1: Urban/Suburban Classification
+**Checklist:**
+- [x] Calculate population density per response area
+- [x] Apply 3-tier classification (urban core ≥10k, inner suburban 3-10k, outer suburban <3k)
+- [x] Validate via interactive map (`outputs/map_urban_classification.html`)
+- [x] Cross-tab with housing typology
 
-```python
-from shapely.geometry import Point
-import geopandas as gpd
+---
 
-def parse_location(loc):
-    if pd.isna(loc): return None
-    try:
-        lon, lat = loc.strip("()").split(",")
-        return Point(float(lon), float(lat))
-    except: return None
+## Phase 5: Core Analysis ✅
 
-incidents["geometry"] = incidents["location"].apply(parse_location)
-incidents_gdf = gpd.GeoDataFrame(incidents, geometry="geometry", crs="EPSG:4326")
-incidents_joined = gpd.sjoin(incidents_gdf, response_areas, how="left", predicate="within")
-```
+### Task 5.1: Incident Rates
+**Script:** `04_analysis.py`
+**Outputs:** `outputs/summary_by_urban_class.csv`, `outputs/summary_by_housing_type.csv`
 
 **Checklist:**
-- [ ] Parse coordinates
-- [ ] Spatial join
-- [ ] Validate against `responsearea` field
-- [ ] Count incidents outside boundaries
+- [x] Count incidents by response area and type
+- [x] Calculate per-capita and per-unit rates
+- [x] Break down by incident type (structure, vehicle, outdoor, trash)
+- [x] Year-over-year trends (2022, 2023, 2024)
 
 ---
 
-### Task 3.2: Build Tract → Response Area Crosswalk
-**Time:** 3-4 hours  
-**Output:** `tract_to_response_area_crosswalk.csv`
-
-**Area-Weighted Interpolation:**
-```python
-tracts = tracts.to_crs("EPSG:32614")
-response_areas = response_areas.to_crs("EPSG:32614")
-tracts["tract_area"] = tracts.geometry.area
-
-overlay = gpd.overlay(tracts, response_areas, how="intersection")
-overlay["intersection_area"] = overlay.geometry.area
-overlay["weight"] = overlay["intersection_area"] / overlay["tract_area"]
-```
+### Task 5.2: Statistical Tests
+**Output:** `outputs/statistical_tests.txt`
 
 **Checklist:**
-- [ ] Decide: area-weighted vs centroid
-- [ ] Build crosswalk
-- [ ] Validate population totals
+- [x] T-tests: urban vs suburban (ANOVA p=0.001, significant)
+- [x] Correlation: %SF vs incident rate (r=-0.306, p<0.001)
+- [x] Building age analysis (141% higher structure fire rate in older stock)
+
+**Key Results:**
+- Urban core mean: 18.78 incidents/1,000 pop
+- Inner suburban mean: 21.92/1,000
+- Outer suburban mean: 10.84/1,000
+- Multifamily areas: 4-6x higher fire rates than single-family areas
+- Negative correlation between %SF and incident rate
 
 ---
 
-### Task 3.3: Aggregate Census to Response Areas
-**Time:** 1-2 hours  
-**Output:** `response_areas_with_demographics.csv`
-
-```python
-merged["allocated_pop"] = merged["population"] * merged["weight"]
-response_area_stats = merged.groupby("response_area_id").agg({
-    "allocated_pop": "sum",
-    "allocated_sf_units": "sum",
-    "allocated_mf_units": "sum"
-}).reset_index()
-```
+### Task 5.3: NFIRS Cause Analysis ✅
+**Script:** `06_nfirs_cause_analysis.py`
+**Outputs:** `outputs/cause_by_housing_type.csv`, `outputs/heat_source_by_housing.csv`, `outputs/area_origin_by_housing.csv`, `outputs/sprinkler_by_housing.csv`
 
 **Checklist:**
-- [ ] Allocate population
-- [ ] Allocate housing units
-- [ ] Calculate % SF per area
-- [ ] Sanity check totals
+- [x] Extract Austin fire incidents from NFIRS (TX FDID WP801, 2018-2021)
+- [x] Cause of ignition by housing type (76% unintentional in MF vs 64% in SF)
+- [x] Heat source breakdown (cooking #1 in both; smoking 18% in MF vs 5% in SF)
+- [x] Area of origin (kitchen 32% in MF vs 20% in SF)
+- [x] Sprinkler analysis (no sprinklers recorded as "present" in either type)
 
 ---
 
-## Phase 4: Classification (Week 2-3)
-
-### Task 4.1: Calculate Density & Classify
-**Time:** 1.5 hours
-
-| Classification | Density (people/sq mi) |
-|----------------|------------------------|
-| Urban Core | ≥ 10,000 |
-| Inner Suburban | 3,000 - 10,000 |
-| Outer Suburban | 1,000 - 3,000 |
-| Exurban | < 1,000 |
-
-```python
-def classify_urban(density):
-    if density >= 10000: return "urban_core"
-    elif density >= 3000: return "inner_suburban"
-    elif density >= 1000: return "outer_suburban"
-    else: return "exurban"
-
-response_areas["urban_class"] = response_areas["pop_density"].apply(classify_urban)
-```
+### Task 5.4: Building Height Analysis (in progress)
+**Script:** `06_nfirs_cause_analysis.py` (new functions)
 
 **Checklist:**
-- [ ] Calculate density
-- [ ] Apply classification
-- [ ] Map it - does it look right?
-- [ ] Cross-tab with housing typology
+- [x] Extract NFIRS building characteristics (BLDG_ABOVE, STRUC_TYPE, etc.)
+- [x] Categorize fires by building height (1-2, 3-4, 5-7, 8+ stories)
+- [x] Cross-tab with fire spread, cause, sprinklers, property loss
+- [ ] Generate outputs (requires NFIRS data download)
+- [ ] Suburban vs urban contrast analysis
 
 ---
 
-## Phase 5: Core Analysis (Week 3)
+## Phase 6: Visualization ✅
 
-### Task 5.1: Count Incidents by Area
-**Time:** 1 hour
+### Task 6.1: Interactive Maps
+**Script:** `05_visualize.py`
 
-```python
-total_counts = incidents.groupby("response_area_id").size().reset_index(name="total_incidents")
-structure_fires = incidents[incidents["problem"].str.contains("STRUCTURE|BOX", case=False, na=False)]
-structure_counts = structure_fires.groupby("response_area_id").size().reset_index(name="structure_fires")
-```
-
-**Checklist:**
-- [ ] Count total incidents
-- [ ] Count structure fires
-- [ ] Other incident types?
+- [x] `map_incidents_per_capita.html` — Incident rates choropleth
+- [x] `map_building_age.html` — Building age distribution
+- [x] `map_fire_stations.html` — Station locations
+- [x] `map_housing_typology.html` — Housing type distribution
+- [x] `map_urban_classification.html` — Urban/suburban classification
 
 ---
 
-### Task 5.2: Calculate Per-Capita Rates
-**Time:** 1 hour
+### Task 6.2: Charts
 
-```python
-analysis["incidents_per_1000_pop"] = (analysis["total_incidents"] / analysis["population"]) * 1000
-analysis["incidents_per_1000_units"] = (analysis["total_incidents"] / analysis["total_units"]) * 1000
-analysis["structure_fires_per_1000_units"] = (analysis["structure_fires"] / analysis["total_units"]) * 1000
-```
-
-**Checklist:**
-- [ ] Incidents per 1,000 pop
-- [ ] Incidents per 1,000 units
-- [ ] Structure fires per 1,000 units
+- [x] `chart_urban_comparison.png` — Incident rates by urban class
+- [x] `chart_incident_type_by_housing.png` — Incident types by housing classification
+- [x] `chart_incident_types_by_age.png` — Incident types by building age
+- [x] `chart_structure_fires_by_housing.png` — Structure fire trends by housing type
+- [x] `chart_structure_fires_by_urban.png` — Structure fire trends by urban class
+- [x] `chart_cause_comparison.png` — NFIRS cause comparison (MF vs SF)
+- [x] `chart_heat_source_comparison.png` — Heat source comparison
+- [x] `chart_housing_correlation.png` — Housing type correlation
+- [x] `table_summary.png` — Summary statistics table
 
 ---
 
-### Task 5.3: Compare Urban vs Suburban
-**Time:** 2 hours
-
-```python
-from scipy import stats
-
-urban = analysis[analysis["urban_class"] == "urban_core"]["incidents_per_1000_pop"]
-suburban = analysis[analysis["urban_class"].isin(["outer_suburban", "exurban"])]["incidents_per_1000_pop"]
-
-t_stat, p_value = stats.ttest_ind(urban, suburban, nan_policy="omit")
-```
-
-**Checklist:**
-- [ ] Summary table by urban class
-- [ ] Statistical test (t-test or ANOVA)
-- [ ] Is difference significant?
-- [ ] Effect size?
-
----
-
-### Task 5.4: Analyze by Housing Typology
-**Time:** 1 hour
-
-```python
-from scipy.stats import pearsonr
-corr, p = pearsonr(analysis["pct_sf"], analysis["incidents_per_1000_units"])
-```
-
-**Checklist:**
-- [ ] Correlation: %SF vs incident rate
-- [ ] Summary by SF category
-- [ ] Does higher SF% = more fires?
-
----
-
-## Phase 6: Visualization (Week 3-4)
-
-### Task 6.1: Create Maps
-**Time:** 2-3 hours
-
-**Maps needed:**
-1. [ ] Population density choropleth
-2. [ ] Incidents per capita choropleth
-3. [ ] % Single-family choropleth
-4. [ ] Urban/suburban classification
-
----
-
-### Task 6.2: Create Charts
-**Time:** 1-2 hours
-
-**Charts needed:**
-1. [ ] Bar: Incident rates by urban class
-2. [ ] Scatter: %SF vs incident rate
-3. [ ] Bar: Incident types breakdown
-
----
-
-## Phase 7: Write-Up (Week 4)
+## Phase 7: Write-Up (partially complete)
 
 ### Task 7.1: Draft Key Findings
-**Time:** 2-3 hours
+**Output:** `outputs/REPORT_Austin_Fire_Analysis.md`
 
 **Checklist:**
-- [ ] State main finding (hypothesis supported?)
-- [ ] Include specific numbers
-- [ ] Note limitations
-- [ ] Policy implications
+- [x] Main finding stated (multifamily 4-6x higher rates)
+- [x] Specific numbers included
+- [x] Limitations noted
+- [x] Sprinkler code effectiveness documented (141% reduction)
+- [ ] Update report with NFIRS cause analysis findings
+- [ ] Update report with zoning/building height context
+- [ ] Policy implications for single-stair and HOME
 
 ---
 
 ### Task 7.2: Review with Tim
-**Time:** 1 hour
-
-**Checklist:**
 - [ ] Schedule meeting
 - [ ] Share draft beforehand
 - [ ] Incorporate feedback
@@ -379,31 +221,27 @@ corr, p = pearsonr(analysis["pct_sf"], analysis["incidents_per_1000_units"])
 ---
 
 ### Task 7.3: Finalize Deliverables
-**Time:** 2 hours
-
-**Final outputs:**
-- [ ] 1-2 page brief (PDF)
-- [ ] Summary stats (CSV)
-- [ ] Maps (PNG)
+- [x] Summary stats (CSV) — multiple output CSVs
+- [x] Maps (HTML interactive) — 5 maps
+- [x] Charts (PNG) — 9+ charts
+- [x] Analysis report (Markdown + HTML)
+- [ ] 1-2 page policy brief (PDF)
 - [ ] Methodology appendix
-- [ ] Code/notebooks
 
 ---
 
 ## Time Summary
 
-| Phase | Hours |
-|-------|-------|
-| 1. Data Acquisition | 4-6 |
-| 2. Exploration | 4-6 |
-| 3. Spatial Joins | 6-8 |
-| 4. Classification | 2-3 |
-| 5. Analysis | 5-6 |
-| 6. Visualization | 3-5 |
-| 7. Write-Up | 5-6 |
-| **Total** | **29-40** |
-
-At ~10 hrs/week = **3-4 weeks**
+| Phase | Est. Hours | Status |
+|-------|-----------|--------|
+| 1. Data Acquisition | 4-6 | ✅ Complete |
+| 2. Data Cleaning | 2-3 | ✅ Complete |
+| 3. Spatial Joins & Crosswalk | 6-8 | ✅ Complete |
+| 4. Classification | 2-3 | ✅ Complete |
+| 5. Core Analysis + NFIRS | 8-10 | ✅ Complete |
+| 6. Visualization | 3-5 | ✅ Complete |
+| 7. Write-Up & Review | 5-6 | 🔄 In progress |
+| **Total** | **30-41** | |
 
 ---
 
@@ -411,10 +249,22 @@ At ~10 hrs/week = **3-4 weeks**
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| | | |
+| — | Use 2022-2024 data only | 2018-2021 dataset removed from Austin Open Data Portal |
+| — | Area-weighted interpolation over centroid | More accurate for response areas spanning multiple census tracts |
+| — | 3-tier urban classification (10k/3k thresholds) | Simple, defensible, validated by visual inspection |
+| — | Use 2006 sprinkler code as age threshold | Austin adopted residential sprinkler requirement Jan 1, 2006; ~2010 construction lag |
+| 2026-03-31 | Zoning codes as building height proxy | Current data, full city coverage, maps to what can be built under LDC |
+| 2026-03-31 | Census B25024 housing mix as ETJ height fallback | 203/711 response areas lack zoning; housing type mix is reasonable proxy |
+| 2026-03-31 | Flag estimated vs zoning-derived height data | `height_data_source` column distinguishes data quality for downstream analysis |
+| 2026-03-31 | Area-weighted allocation over centroid assignment | More accurate for large response areas spanning multiple zoning districts |
+| 2026-03-31 | Vertical mixed-use overlay → 6-story minimum | `-V` overlay explicitly permits taller buildings regardless of base zone |
 
 ---
 
 ## Next Action
 
-**Start here:** Task 1.1 - Download fire incident data
+**Remaining work:**
+1. Commit zoning/height changes on `feature/building-height-data`
+2. Update analysis report with NFIRS cause findings and zoning context
+3. Draft policy brief connecting findings to single-stair and HOME implications
+4. Review with Timothy Bray

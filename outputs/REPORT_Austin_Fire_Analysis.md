@@ -1,9 +1,9 @@
 # Austin Fire Department Resource Analysis
 ## Fire Incident Patterns by Housing Type, Urban Classification, and Building Age
 
-**Analysis Period:** 2022-2024
-**Data Source:** Austin Open Data Portal, US Census ACS 2022
-**Prepared:** December 2024
+**Analysis Period:** 2022-2024 (AFD incidents), 2018-2021 (NFIRS cause data)
+**Data Source:** Austin Open Data Portal, US Census ACS 2022, NFIRS Public Data Release
+**Prepared:** December 2024, updated March 2026
 
 ---
 
@@ -20,6 +20,8 @@ This analysis examines fire incident patterns across Austin Fire Department's se
 2. **The 2006 Austin sprinkler code is working** - structure fires are 141% higher in older buildings vs. newer construction
 3. **Trash/dumpster fires dominate** in high-density areas (30.6 per 1,000 units in multifamily vs. 4.6 in single-family)
 4. **Outer suburban areas have consistently lowest fire rates** (~1 structure fire per 1,000 units annually)
+5. **Cooking and smoking — not arson — drive the multifamily gap** (NFIRS: 76% unintentional in MF vs 64% in SF)
+6. **Kitchen fires account for 32% of multifamily fire origins** vs 20% in single-family
 
 ---
 
@@ -136,12 +138,63 @@ Austin adopted residential sprinkler requirements in 2006, affecting constructio
 
 ---
 
+## 7. NFIRS Cause Analysis (2018-2021)
+
+Using national NFIRS data for Austin (TX FDID WP801), we analyzed the *causes* behind the multifamily fire rate gap.
+
+### Cause of Ignition
+
+| Cause | Multifamily | Single-Family |
+|-------|------------|---------------|
+| **Unintentional** | **76.2%** | **64.3%** |
+| Equipment failure | 10.6% | 16.3% |
+| Intentional (arson) | 6.0% | 9.7% |
+| Undetermined | 5.0% | 4.3% |
+| Under investigation | 1.4% | 2.3% |
+| Act of nature | 0.7% | 2.3% |
+
+**Key finding:** Unintentional causes dominate in both housing types, but are proportionally higher in multifamily (76% vs 64%). Intentional fires (arson) are actually *lower* in multifamily — arson is not driving the rate gap.
+
+### Heat Source
+
+| Heat Source | Multifamily | Single-Family |
+|-------------|------------|---------------|
+| **Cooking** | **24.1%** | **23.0%** |
+| Electrical | 19.1% | 17.7% |
+| **Smoking** | **18.1%** | **4.7%** |
+| Heating | 16.0% | 20.0% |
+| Open flame | 3.5% | 6.0% |
+
+**Key finding:** Smoking is 4x more common as a heat source in multifamily fires (18% vs 5%). Cooking is the top heat source in both types. Heating-related fires are more common in single-family.
+
+### Area of Origin
+
+| Area | Multifamily | Single-Family |
+|------|------------|---------------|
+| **Kitchen** | **31.6%** | **19.7%** |
+| Exterior | 21.3% | 25.3% |
+| Bathroom/Laundry | 6.0% | 4.7% |
+| Living areas | 3.2% | 7.0% |
+
+**Key finding:** Kitchen fires account for nearly a third of multifamily fire origins, consistent with the cooking + density hypothesis.
+
+### Policy Implications
+
+These cause data suggest that the higher fire rates in multifamily areas are driven by **behavioral factors** (cooking, smoking) amplified by density, not by building deficiency or arson. This has implications for:
+- **Single-stair buildings:** New construction with enhanced sprinklers should mitigate risk; the causes (cooking, smoking) are independent of stairwell count
+- **Prevention:** Cooking safety programs and smoking policies in multifamily buildings may be more cost-effective than infrastructure investments
+- **HOME initiative:** As SF lots are redeveloped with denser housing, fire prevention education should scale accordingly
+
+---
+
 ## Methodology
 
 ### Data Sources
 - **Fire Incidents:** Austin Open Data Portal (AFD Fire Incidents 2022-2024)
+- **NFIRS Cause Data:** USFA NFIRS Public Data Release (2018-2021, TX FDID WP801)
 - **Demographics:** US Census American Community Survey 2022 5-Year Estimates
 - **Geographic Boundaries:** City of Austin ArcGIS (AFD Response Areas)
+- **Zoning:** City of Austin ArcGIS (Current Zoning Districts)
 
 ### Definitions
 - **Urban Core:** Population density >10,000 per square mile
@@ -152,8 +205,11 @@ Austin adopted residential sprinkler requirements in 2006, affecting constructio
 
 ### Limitations
 - Census demographics from 2022 applied to all years (assumes stable population)
-- Historical data (2018-2021) not available from Austin Open Data Portal
+- Historical AFD data (2018-2021) not available from Austin Open Data Portal
 - Building age based on area-level percentages, not individual structure data
+- NFIRS cause data (2018-2021) is from a different time period than AFD incident data (2022-2024)
+- NFIRS sprinkler presence field has low reporting quality (no "present" records in Austin data)
+- Income (B19013) not yet integrated as a confounding variable
 
 ---
 
@@ -162,17 +218,30 @@ Austin adopted residential sprinkler requirements in 2006, affecting constructio
 ### Data Files
 - `summary_by_urban_class.csv` - Aggregate statistics by urban classification
 - `summary_by_housing_type.csv` - Aggregate statistics by housing typology
+- `summary_by_building_age.csv` - Aggregate statistics by building age
+- `summary_by_incident_type.csv` - Incident counts by category
 - `structure_fires_by_housing_trend.csv` - Year-over-year structure fire trends
 - `incident_types_by_building_age.csv` - Incident rates by building age
 - `incident_rates_by_housing_and_type.csv` - Full cross-tabulation
+- `station_coverage.csv` - Fire station coverage by urban class
+- `cause_by_housing_type.csv` - NFIRS cause of ignition by housing type
+- `heat_source_by_housing.csv` - NFIRS heat source by housing type
+- `area_origin_by_housing.csv` - NFIRS area of origin by housing type
+- `sprinkler_by_housing.csv` - NFIRS sprinkler presence by housing type
 
 ### Visualizations
 - `chart_incident_type_by_housing.png` - Incident types by housing classification
 - `chart_incident_types_by_age.png` - Incident types by building age
 - `chart_structure_fires_by_housing.png` - Structure fire trends by housing type
 - `chart_structure_fires_by_urban.png` - Structure fire trends by urban class
+- `chart_cause_comparison.png` - NFIRS cause comparison (MF vs SF)
+- `chart_heat_source_comparison.png` - NFIRS heat source comparison
+- `chart_housing_correlation.png` - Housing type correlation scatter
 - `map_incidents_per_capita.html` - Interactive map of incident rates
 - `map_building_age.html` - Interactive map of building age distribution
+- `map_fire_stations.html` - Fire station locations
+- `map_housing_typology.html` - Housing type distribution
+- `map_urban_classification.html` - Urban/suburban classification
 
 ---
 
