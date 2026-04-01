@@ -10,6 +10,7 @@ Usage:
 Output:
     raw_data/afd_incidents_2022_2024.csv
     raw_data/afd_response_areas.geojson
+    raw_data/zoning.geojson
     raw_data/census_population.csv
     raw_data/census_housing.csv
     raw_data/census_year_built.csv
@@ -30,6 +31,7 @@ Note on Historical Data (2018-2021):
 import os
 import requests
 import json
+import time
 
 # Create directories
 os.makedirs("raw_data", exist_ok=True)
@@ -59,6 +61,60 @@ def download_file(url, filename, description):
         print(f"✓ Downloaded {size_mb:.2f} MB")
         return True
         
+    except Exception as e:
+        print(f"✗ Failed: {e}")
+        return False
+
+
+def download_arcgis_paginated(base_url, filename, description, batch_size=2000):
+    """Download all features from an ArcGIS FeatureServer with pagination."""
+    if os.path.isfile(filename):
+        print("File already exists, skipping download.")
+        return True
+
+    print(f"\n{'='*60}")
+    print(f"Downloading: {description}")
+    print(f"Saving to: {filename}")
+    print('='*60)
+
+    try:
+        all_features = []
+        offset = 0
+
+        while True:
+            url = (f"{base_url}/query?where=1%3D1&outFields=*&outSR=4326&f=geojson"
+                   f"&resultOffset={offset}&resultRecordCount={batch_size}")
+            response = requests.get(url, timeout=120)
+            response.raise_for_status()
+            data = response.json()
+
+            features = data.get('features', [])
+            if not features:
+                break
+
+            all_features.extend(features)
+            print(f"  Fetched {len(all_features)} features...")
+            offset += batch_size
+
+            # If we got fewer than batch_size, we've reached the end
+            if len(features) < batch_size:
+                break
+
+            time.sleep(0.5)  # Be polite to the server
+
+        # Build complete GeoJSON
+        geojson = {
+            "type": "FeatureCollection",
+            "features": all_features
+        }
+
+        with open(filename, 'w') as f:
+            json.dump(geojson, f)
+
+        size_mb = os.path.getsize(filename) / (1024 * 1024)
+        print(f"✓ Downloaded {len(all_features)} features ({size_mb:.2f} MB)")
+        return True
+
     except Exception as e:
         print(f"✗ Failed: {e}")
         return False
@@ -124,7 +180,14 @@ def main():
         "AFD Response Area Boundaries"
     )
     
-    # 3. Census Population (ACS 5-Year)
+    # 3. Zoning Districts (City of Austin ArcGIS - requires pagination)
+    results['zoning'] = download_arcgis_paginated(
+        "https://services.arcgis.com/0L95CJ0VTaxqcmED/arcgis/rest/services/Current_Zoning_gdb/FeatureServer/0",
+        "raw_data/zoning.geojson",
+        "Austin Zoning Districts (~22k polygons)"
+    )
+
+    # 4. Census Population (ACS 5-Year)
     results['census_population'] = download_census_api(
         "B01003",
         ["B01003_001E", "NAME"],

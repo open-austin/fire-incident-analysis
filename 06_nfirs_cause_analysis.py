@@ -2,9 +2,12 @@
 """
 Step 6: NFIRS Cause Analysis
 =============================
-Analyzes fire causes and sprinkler effects by housing type using detailed NFIRS data.
+Analyzes fire causes, sprinkler effects, and building characteristics by housing type
+using detailed NFIRS data.
 
-Addresses the question: Why does multifamily have 4x higher structure fire rates?
+Addresses the questions:
+- Why does multifamily have 4x higher structure fire rates?
+- How do fire outcomes vary by building height (number of stories)?
 
 Usage:
     python 06_nfirs_cause_analysis.py
@@ -12,6 +15,7 @@ Usage:
 Input:
     raw_data/nfirs/*/data/fireincident.txt
     raw_data/nfirs/*/data/basicincident.txt
+    raw_data/nfirs/*/data/structurefire.txt
     raw_data/nfirs/*/data/codelookup.txt
 
 Output:
@@ -19,8 +23,10 @@ Output:
     outputs/cause_by_housing_type.csv
     outputs/heat_source_by_housing.csv
     outputs/sprinkler_analysis.csv
+    outputs/building_height_analysis.csv
     outputs/chart_cause_comparison.png
     outputs/chart_sprinkler_effect.png
+    outputs/chart_building_height.png
 """
 
 import pandas as pd
@@ -129,12 +135,15 @@ def extract_austin_nfirs():
     # Find all fireincident files
     fire_files = glob.glob("raw_data/nfirs/*/data/fireincident.txt")
     basic_files = glob.glob("raw_data/nfirs/*/data/basicincident.txt")
+    struct_files = glob.glob("raw_data/nfirs/*/data/structurefire.txt")
 
     if not fire_files:
         print("  Error: No fireincident.txt files found")
         return None
 
     print(f"  Found {len(fire_files)} years of NFIRS data")
+    if struct_files:
+        print(f"  Found {len(struct_files)} structurefire files (building characteristics)")
 
     # Load and filter fireincident data
     fire_dfs = []
@@ -183,14 +192,59 @@ def extract_austin_nfirs():
     basic_cols = key_cols + ['INC_TYPE', 'PROP_USE', 'PROP_LOSS', 'CONT_LOSS']
     basic_cols = [c for c in basic_cols if c in basic_df.columns]
 
-    # Merge
+    # Merge fire + basic
     merged = fire_df[fire_cols].merge(
         basic_df[basic_cols],
         on=key_cols,
         how='inner'
     )
 
-    print(f"\n  Merged dataset: {len(merged)} records")
+    print(f"\n  Merged fire+basic dataset: {len(merged)} records")
+
+    # Load and merge structurefire data (building characteristics)
+    if struct_files:
+        struct_dfs = []
+        for f in struct_files:
+            year = f.split('/')[2]
+            print(f"  Processing structurefire {year}...")
+
+            df = pd.read_csv(f, sep='^', quotechar='"', dtype=str, low_memory=False, encoding='latin-1')
+            df_austin = df[(df['STATE'] == 'TX') & (df['FDID'] == 'WP801')]
+            df_austin = df_austin.copy()
+            df_austin['YEAR'] = year
+            struct_dfs.append(df_austin)
+            print(f"    Found {len(df_austin)} Austin structure fire records")
+
+        struct_df = pd.concat(struct_dfs, ignore_index=True)
+        print(f"  Total structurefire records: {len(struct_df)}")
+
+        # Select building characteristic columns
+        struct_cols = key_cols + [
+            'STRUC_TYPE',   # Structure type (1=enclosed, 2=open, etc.)
+            'STRUC_STAT',   # Structure status (under construction, normal use, etc.)
+            'BLDG_ABOVE',   # Number of floors above grade
+            'BLDG_BELOW',   # Number of floors below grade
+            'BLDG_LGTH',    # Building length in feet
+            'BLDG_WDTH',    # Building width in feet
+            'TOT_SQ_FT',    # Total square footage
+            'FIRE_ORIG',    # Floor of fire origin
+        ]
+        struct_cols = [c for c in struct_cols if c in struct_df.columns]
+
+        merged = merged.merge(
+            struct_df[struct_cols],
+            on=key_cols,
+            how='left'
+        )
+
+        # Report on building height data availability
+        if 'BLDG_ABOVE' in merged.columns:
+            has_height = merged['BLDG_ABOVE'].notna() & (merged['BLDG_ABOVE'] != '')
+            print(f"  Records with building height data: {has_height.sum()} ({has_height.mean()*100:.1f}%)")
+    else:
+        print("\n  Note: No structurefire.txt files found - building height data unavailable")
+
+    print(f"\n  Final merged dataset: {len(merged)} records")
 
     return merged
 
@@ -439,6 +493,196 @@ def analyze_sprinkler_effect(df):
     return sprinkler_pct
 
 
+def analyze_building_height(df):
+    """Analyze fire incidents by building height (number of stories)"""
+    print("\n" + "="*80)
+    print("BUILDING HEIGHT ANALYSIS")
+    print("="*80)
+
+    if 'BLDG_ABOVE' not in df.columns:
+        print("  No building height data available (structurefire.txt not loaded)")
+        return None
+
+    residential = df[df['housing_type'].isin(['Single-family', 'Multifamily'])].copy()
+
+    if len(residential) == 0:
+        return None
+
+    # Convert floors above grade to numeric
+    residential['floors_above'] = pd.to_numeric(residential['BLDG_ABOVE'], errors='coerce')
+
+    has_data = residential['floors_above'].notna()
+    print(f"\n  Residential records with floor data: {has_data.sum()} of {len(residential)}")
+
+    if has_data.sum() == 0:
+        print("  No valid building height data for residential incidents")
+        return None
+
+    res_with_floors = residential[has_data].copy()
+
+    # Create height categories
+    def categorize_height(floors):
+        if floors <= 2:
+            return '1-2 stories (low-rise)'
+        elif floors <= 4:
+            return '3-4 stories (mid-rise)'
+        elif floors <= 7:
+            return '5-7 stories (mid-rise+)'
+        else:
+            return '8+ stories (high-rise)'
+
+    res_with_floors['height_category'] = res_with_floors['floors_above'].apply(categorize_height)
+
+    # Distribution of fires by building height
+    print("\nFire Incidents by Building Height:")
+    height_dist = res_with_floors['height_category'].value_counts().sort_index()
+    print(height_dist.to_string())
+
+    # Height distribution by housing type
+    print("\nBuilding Height by Housing Type:")
+    height_by_type = pd.crosstab(
+        res_with_floors['housing_type'],
+        res_with_floors['height_category'],
+        normalize='index'
+    ) * 100
+    print(height_by_type.round(1).to_string())
+
+    # Fire spread by building height
+    if 'FIRE_SPRD' in res_with_floors.columns:
+        res_with_floors['fire_spread'] = res_with_floors['FIRE_SPRD'].apply(
+            lambda x: {
+                '1': 'Confined to object',
+                '2': 'Confined to room',
+                '3': 'Confined to floor',
+                '4': 'Confined to building',
+                '5': 'Beyond building'
+            }.get(str(x), 'Unknown') if pd.notna(x) else 'Unknown'
+        )
+
+        print("\nFire Spread by Building Height:")
+        spread_by_height = pd.crosstab(
+            res_with_floors['height_category'],
+            res_with_floors['fire_spread'],
+            normalize='index'
+        ) * 100
+        print(spread_by_height.round(1).to_string())
+
+    # Cause of ignition by building height
+    if 'cause_label' in res_with_floors.columns:
+        print("\nCause of Ignition by Building Height:")
+        cause_by_height = pd.crosstab(
+            res_with_floors['height_category'],
+            res_with_floors['cause_label'],
+            normalize='index'
+        ) * 100
+        print(cause_by_height.round(1).to_string())
+
+    # Sprinkler presence by building height
+    if 'AES_PRES' in res_with_floors.columns:
+        res_with_floors['sprinkler_present'] = res_with_floors['AES_PRES'].apply(
+            lambda x: 'Yes' if x == 'Y' else ('No' if x == 'N' else 'Unknown')
+        )
+
+        print("\nSprinkler Presence by Building Height:")
+        spr_by_height = pd.crosstab(
+            res_with_floors['height_category'],
+            res_with_floors['sprinkler_present'],
+            normalize='index'
+        ) * 100
+        print(spr_by_height.round(1).to_string())
+
+    # Property loss by building height
+    if 'PROP_LOSS' in res_with_floors.columns:
+        res_with_floors['prop_loss_num'] = pd.to_numeric(res_with_floors['PROP_LOSS'], errors='coerce')
+        loss_by_height = res_with_floors.groupby('height_category')['prop_loss_num'].agg(['mean', 'median', 'count'])
+        print("\nProperty Loss by Building Height:")
+        print(loss_by_height.round(0).to_string())
+
+    # Summary stats
+    print(f"\nMean floors above grade: {res_with_floors['floors_above'].mean():.1f}")
+    print(f"Median floors above grade: {res_with_floors['floors_above'].median():.0f}")
+    print(f"Max floors above grade: {res_with_floors['floors_above'].max():.0f}")
+
+    # Save detailed results
+    height_summary = res_with_floors.groupby('height_category').agg(
+        incident_count=('floors_above', 'count'),
+        mean_floors=('floors_above', 'mean'),
+    ).sort_index()
+
+    return height_summary
+
+
+def create_building_height_chart(df):
+    """Create building height analysis chart"""
+    import matplotlib.pyplot as plt
+
+    residential = df[df['housing_type'].isin(['Single-family', 'Multifamily'])].copy()
+    residential['floors_above'] = pd.to_numeric(residential.get('BLDG_ABOVE'), errors='coerce')
+    res_with_floors = residential[residential['floors_above'].notna()].copy()
+
+    if len(res_with_floors) == 0:
+        return
+
+    def categorize_height(floors):
+        if floors <= 2:
+            return '1-2 stories'
+        elif floors <= 4:
+            return '3-4 stories'
+        elif floors <= 7:
+            return '5-7 stories'
+        else:
+            return '8+ stories'
+
+    res_with_floors['height_category'] = res_with_floors['floors_above'].apply(categorize_height)
+
+    # Fire spread by building height
+    res_with_floors['fire_spread'] = res_with_floors['FIRE_SPRD'].apply(
+        lambda x: {
+            '1': 'Confined to object',
+            '2': 'Confined to room',
+            '3': 'Confined to floor',
+            '4': 'Confined to building',
+            '5': 'Beyond building'
+        }.get(str(x), 'Unknown') if pd.notna(x) else 'Unknown'
+    )
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+
+    # Left: incident count by height category
+    height_order = ['1-2 stories', '3-4 stories', '5-7 stories', '8+ stories']
+    height_counts = res_with_floors['height_category'].value_counts().reindex(height_order).fillna(0)
+
+    axes[0].bar(height_counts.index, height_counts.values, color=['#2ca02c', '#ff7f0e', '#d62728', '#9467bd'])
+    axes[0].set_title('Fire Incidents by Building Height')
+    axes[0].set_ylabel('Number of Incidents')
+    axes[0].tick_params(axis='x', rotation=15)
+    for i, v in enumerate(height_counts.values):
+        axes[0].text(i, v + 1, str(int(v)), ha='center', fontweight='bold')
+
+    # Right: fire spread by height
+    spread_by_height = pd.crosstab(
+        res_with_floors['height_category'],
+        res_with_floors['fire_spread'],
+        normalize='index'
+    ) * 100
+    spread_by_height = spread_by_height.reindex(height_order)
+    spread_cols = ['Confined to object', 'Confined to room', 'Confined to floor',
+                   'Confined to building', 'Beyond building']
+    spread_cols = [c for c in spread_cols if c in spread_by_height.columns]
+    spread_by_height[spread_cols].plot(kind='bar', stacked=True, ax=axes[1],
+                                       colormap='RdYlGn_r')
+    axes[1].set_title('Fire Spread by Building Height')
+    axes[1].set_ylabel('Percentage of Fires (%)')
+    axes[1].set_xlabel('')
+    axes[1].tick_params(axis='x', rotation=15)
+    axes[1].legend(title='Fire Spread', bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=8)
+
+    plt.tight_layout()
+    plt.savefig('outputs/chart_building_height.png', dpi=150, bbox_inches='tight')
+    plt.close()
+    print("  Saved: outputs/chart_building_height.png")
+
+
 def create_visualizations(df, cause_pct, heat_pct, sprinkler_pct):
     """Create comparison charts"""
     print("\nCreating visualizations...")
@@ -582,6 +826,7 @@ def main():
     heat_pct = analyze_heat_source_by_housing(df)
     area_pct = analyze_area_origin_by_housing(df)
     sprinkler_pct = analyze_sprinkler_effect(df)
+    height_summary = analyze_building_height(df)
 
     # Save analysis outputs
     if cause_pct is not None:
@@ -600,8 +845,16 @@ def main():
         sprinkler_pct.to_csv("outputs/sprinkler_by_housing.csv")
         print("Saved: outputs/sprinkler_by_housing.csv")
 
+    if height_summary is not None:
+        height_summary.to_csv("outputs/building_height_analysis.csv")
+        print("Saved: outputs/building_height_analysis.csv")
+
     # Create visualizations
     create_visualizations(df, cause_pct, heat_pct, sprinkler_pct)
+
+    # Building height chart
+    if height_summary is not None and 'BLDG_ABOVE' in df.columns:
+        create_building_height_chart(df)
 
     # Summary
     print("\n" + "="*80)
