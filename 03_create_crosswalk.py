@@ -25,6 +25,8 @@ import pandas as pd
 import geopandas as gpd
 import os
 import warnings
+from census_variables import YEAR_BUILT_VARS, HOUSING_VARS, POPULATION_VARS
+
 warnings.filterwarnings('ignore')
 
 def load_response_areas():
@@ -136,28 +138,29 @@ def process_census_data(pop_df, housing_df, year_built_df=None):
                               housing_df['county'].astype(str).str.zfill(3) +
                               housing_df['tract'].astype(str).str.zfill(6))
 
+    def _get_code_column(df, code, var_map):
+        name = var_map.get(code, code)
+        if name in df.columns:
+            return name
+        if code in df.columns:
+            return code
+        return None
+
     # Convert population to numeric
-    pop_df['population'] = pd.to_numeric(pop_df['B01003_001E'], errors='coerce')
+    pop_col = _get_code_column(pop_df, 'B01003_001E', POPULATION_VARS)
+    if pop_col:
+        pop_df['population'] = pd.to_numeric(pop_df[pop_col], errors='coerce')
+    else:
+        pop_df['population'] = pd.NA
 
     # Process housing data
-    # B25024_002E: 1, detached
-    # B25024_003E: 1, attached
-    # B25024_004E: 2 units
-    # B25024_005E: 3-4 units
-    # B25024_006E: 5-9 units
-    # B25024_007E: 10-19 units
-    # B25024_008E: 20-49 units
-    # B25024_009E: 50+ units
-    # B25024_010E: Mobile home
-    # B25024_011E: Boat, RV, van
-
-    housing_cols = ['B25024_001E', 'B25024_002E', 'B25024_003E', 'B25024_004E',
-                    'B25024_005E', 'B25024_006E', 'B25024_007E', 'B25024_008E',
-                    'B25024_009E', 'B25024_010E', 'B25024_011E']
-
-    for col in housing_cols:
-        if col in housing_df.columns:
-            housing_df[col] = pd.to_numeric(housing_df[col], errors='coerce')
+    housing_codes = [c for c in HOUSING_VARS.keys() if c != 'NAME']
+    for code in housing_codes:
+        src_col = _get_code_column(housing_df, code, HOUSING_VARS)
+        if src_col:
+            housing_df[code] = pd.to_numeric(housing_df[src_col], errors='coerce')
+        else:
+            housing_df[code] = pd.NA
 
     # Calculate housing categories (detailed breakdown per Tim's feedback)
     housing_df['total_units'] = housing_df['B25024_001E']
@@ -193,23 +196,14 @@ def process_census_data(pop_df, housing_df, year_built_df=None):
                                       year_built_df['county'].astype(str).str.zfill(3) +
                                       year_built_df['tract'].astype(str).str.zfill(6))
 
-        # B25034 columns:
-        # B25034_001E: Total
-        # B25034_002E: Built 2020 or later
-        # B25034_003E: Built 2010-2019
-        # B25034_004E: Built 2000-2009
-        # B25034_005E: Built 1990-1999
-        # B25034_006E: Built 1980-1989
-        # B25034_007E: Built 1970-1979
-        # B25034_008E: Built 1960-1969
-        # B25034_009E: Built 1950-1959
-        # B25034_010E: Built 1940-1949
-        # B25034_011E: Built 1939 or earlier
-
-        yb_cols = [f'B25034_{str(i).zfill(3)}E' for i in range(1, 12)]
-        for col in yb_cols:
-            if col in year_built_df.columns:
-                year_built_df[col] = pd.to_numeric(year_built_df[col], errors='coerce')
+        # B25034 columns are now defined in census_variables.YEAR_BUILT_VARS
+        yb_codes = [c for c in YEAR_BUILT_VARS.keys() if c != 'NAME']
+        for code in yb_codes:
+            src_col = _get_code_column(year_built_df, code, YEAR_BUILT_VARS)
+            if src_col:
+                year_built_df[code] = pd.to_numeric(year_built_df[src_col], errors='coerce')
+            else:
+                year_built_df[code] = pd.NA
 
         # Calculate building age categories (using 2010 cutoff per plan)
         year_built_df['yb_total'] = year_built_df['B25034_001E']

@@ -334,7 +334,7 @@ def run_statistical_tests(merged_gdf):
         results.append(f"  Suburban mean: {suburban.mean():.2f} incidents per 1,000 pop")
         results.append(f"  t-statistic: {t_stat:.3f}")
         results.append(f"  p-value: {p_value:.4f}")
-        results.append(f"  Significant at α=0.05: {'Yes' if p_value < 0.05 else 'No'}")
+        results.append(f"  Significant at alpha=0.05: {'Yes' if p_value < 0.05 else 'No'}")
         results.append("")
     
     if len(exurban) > 0 and len(urban) > 0:
@@ -344,7 +344,7 @@ def run_statistical_tests(merged_gdf):
         results.append(f"  Outer Suburban mean: {exurban.mean():.2f}")
         results.append(f"  t-statistic: {t_stat:.3f}")
         results.append(f"  p-value: {p_value:.4f}")
-        results.append(f"  Significant at α=0.05: {'Yes' if p_value < 0.05 else 'No'}")
+        results.append(f"  Significant at alpha=0.05: {'Yes' if p_value < 0.05 else 'No'}")
         results.append("")
     
     # ANOVA across all groups
@@ -356,7 +356,7 @@ def run_statistical_tests(merged_gdf):
         results.append(f"ANOVA: All Urban Classifications")
         results.append(f"  F-statistic: {f_stat:.3f}")
         results.append(f"  p-value: {p_value:.4f}")
-        results.append(f"  Significant at α=0.05: {'Yes' if p_value < 0.05 else 'No'}")
+        results.append(f"  Significant at alpha=0.05: {'Yes' if p_value < 0.05 else 'No'}")
         results.append("")
     
     # Correlation: % Single-Family vs Incident Rate
