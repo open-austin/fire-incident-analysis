@@ -5,31 +5,21 @@ Step 1: Download Data
 Downloads all required data files for the fire resource analysis.
 
 Usage:
-    python 01_download_data.py
+    python scripts/01_download_data.py
 
 Output:
     raw_data/afd_incidents_2022_2024.csv
+    raw_data/afd_incidents_2018_2021.csv
     raw_data/afd_response_areas.geojson
     raw_data/census_population.csv
     raw_data/census_housing.csv
     raw_data/census_year_built.csv
     raw_data/fire_stations.geojson
-    raw_data/tl_2023_48_tract.zip
-
-Note on Historical Data (2018-2021):
-    The AFD Fire Incidents 2018-2021 dataset (formerly at dataset ID j9w8-x2vu)
-    was removed from the Austin Open Data Portal and is no longer available for
-    download. This analysis uses only 2022-2024 incident data.
-
-    For historical incident data, consider:
-    - NFIRS (National Fire Incident Reporting System) data from USFA:
-      https://www.usfa.fema.gov/nfirs/data/
-    - Filing a public records request with Austin Fire Department
+    raw_data/travis_county_tracts.geojson
 """
 
 import os
 import requests
-import json
 
 # Create directories
 os.makedirs("raw_data", exist_ok=True)
@@ -64,6 +54,8 @@ def download_file(url, filename, description):
         return False
 
 
+from census_variables import ALL_CENSUS_VARS
+
 def download_census_api(table, variables, filename, description):
     if os.path.isfile(filename):
         print("File already exists, skipping download.")
@@ -85,14 +77,18 @@ def download_census_api(table, variables, filename, description):
         response.raise_for_status()
         
         data = response.json()
-        
-        # Convert to CSV format
+
+        # Convert to CSV format with human-readable column labels
+        header = data[0]
+        header_renamed = [ALL_CENSUS_VARS.get(col, col) for col in header]
+
         import csv
         with open(filename, 'w', newline='') as f:
             writer = csv.writer(f)
-            for row in data:
+            writer.writerow(header_renamed)
+            for row in data[1:]:
                 writer.writerow(row)
-        
+
         print(f"✓ Downloaded {len(data)-1} records")
         return True
         
@@ -109,22 +105,27 @@ def main():
     results = {}
     
     # 1. Fire Incidents 2022-2024
-    # This is the only AFD incident dataset currently available on Austin Open Data.
-    # The 2018-2021 dataset (j9w8-x2vu) was removed from the portal.
-    results['incidents'] = download_file(
+    results['incidents_recent'] = download_file(
         "https://data.austintexas.gov/api/views/v5hh-nyr8/rows.csv?accessType=DOWNLOAD",
         "raw_data/afd_incidents_2022_2024.csv",
         "AFD Fire Incidents 2022-2024"
     )
-
-    # 2. AFD Response Areas
+    
+    # 2. Fire Incidents 2018-2021
+    results['incidents_historical'] = download_file(
+        "https://data.austintexas.gov/api/views/j9w8-x2vu/rows.csv?accessType=DOWNLOAD",
+        "raw_data/afd_incidents_2018_2021.csv",
+        "AFD Fire Incidents 2018-2021"
+    )
+    
+    # 3. AFD Response Areas
     results['response_areas'] = download_file(
         "https://services.arcgis.com/0L95CJ0VTaxqcmED/arcgis/rest/services/BOUNDARIES_afd_response_areas/FeatureServer/0/query?where=1=1&outFields=*&outSR=4326&f=geojson",
         "raw_data/afd_response_areas.geojson",
         "AFD Response Area Boundaries"
     )
     
-    # 3. Census Population (ACS 5-Year)
+    # 4. Census Population
     results['census_population'] = download_census_api(
         "B01003",
         ["B01003_001E", "NAME"],
@@ -132,7 +133,7 @@ def main():
         "Census Population by Tract (Travis County)"
     )
     
-    # 4. Census Housing Units by Type (ACS 5-Year)
+    # 5. Census Housing Units by Type
     housing_vars = ["B25024_001E"]  # Total
     housing_vars += [f"B25024_{str(i).zfill(3)}E" for i in range(2, 12)]  # Breakdown
     housing_vars += ["NAME"]
@@ -144,21 +145,10 @@ def main():
         "Census Housing Units by Type (Travis County)"
     )
 
-    # 5. Census Year Structure Built (ACS 5-Year, B25034)
-    year_built_vars = [
-        "B25034_001E",  # Total
-        "B25034_002E",  # Built 2020 or later
-        "B25034_003E",  # Built 2010-2019
-        "B25034_004E",  # Built 2000-2009
-        "B25034_005E",  # Built 1990-1999
-        "B25034_006E",  # Built 1980-1989
-        "B25034_007E",  # Built 1970-1979
-        "B25034_008E",  # Built 1960-1969
-        "B25034_009E",  # Built 1950-1959
-        "B25034_010E",  # Built 1940-1949
-        "B25034_011E",  # Built 1939 or earlier
-        "NAME"
-    ]
+    # 6. Census Year Structure Built (B25034)
+    from census_variables import YEAR_BUILT_VARS
+
+    year_built_vars = list(YEAR_BUILT_VARS.keys())
 
     results['census_year_built'] = download_census_api(
         "B25034",
@@ -167,14 +157,14 @@ def main():
         "Census Year Structure Built (Travis County)"
     )
 
-    # 6. Fire Station Locations (City of Austin ArcGIS)
+    # 7. Fire Station Locations (from ArcGIS)
     results['fire_stations'] = download_file(
         "https://services.arcgis.com/0L95CJ0VTaxqcmED/arcgis/rest/services/LOCATION_fire_stations/FeatureServer/0/query?where=1=1&outFields=*&outSR=4326&f=geojson",
         "raw_data/fire_stations.geojson",
         "Fire Station Locations"
     )
 
-    # 7. Census Tract Boundaries (TIGER/Line Shapefiles)
+    # 8. Census Tract Boundaries (try Census Reporter first, then TIGER)
     results['tract_boundaries'] = download_file(
         "https://www2.census.gov/geo/tiger/TIGER2023/TRACT/tl_2023_48_tract.zip",
         "raw_data/tl_2023_48_tract.zip",
@@ -194,11 +184,14 @@ def main():
     print("NEXT STEPS")
     print("="*60)
     print("""
-1. Unzip the tract boundaries:
-   unzip raw_data/tl_2023_48_tract.zip -d raw_data/tl_2023_48_tract
+1. If tract boundaries downloaded as ZIP, unzip:
+   unzip raw_data/tl_2023_48_tract.zip -d raw_data/
 
-2. Run the data cleaning script:
-   python 02_clean_incidents.py
+2. Filter Texas tracts to Travis County only (in QGIS or Python):
+   Keep only COUNTYFP = '453'
+
+3. Run the next script:
+   python scripts/02_clean_incidents.py
 """)
     
     return all(results.values())
