@@ -54,7 +54,7 @@ def download_file(url, filename, description):
         return False
 
 
-from census_variables import ALL_CENSUS_VARS
+from census_variables import ALL_CENSUS_VARS, AUSTIN_COUNTIES
 
 def download_census_api(table, variables, filename, description):
     if os.path.isfile(filename):
@@ -69,8 +69,9 @@ def download_census_api(table, variables, filename, description):
     
     base_url = "https://api.census.gov/data/2022/acs/acs5"
     var_string = ",".join(variables)
-    
-    url = f"{base_url}?get={var_string}&for=tract:*&in=state:48&in=county:453"
+    county_string = ",".join(AUSTIN_COUNTIES.values())
+
+    url = f"{base_url}?get={var_string}&for=tract:*&in=state:48&in=county:{county_string}"
     
     try:
         response = requests.get(url, timeout=60)
@@ -187,8 +188,8 @@ def main():
 1. If tract boundaries downloaded as ZIP, unzip:
    unzip raw_data/tl_2023_48_tract.zip -d raw_data/
 
-2. Filter Texas tracts to Travis County only (in QGIS or Python):
-   Keep only COUNTYFP = '453'
+2. Filter Texas tracts to Austin-Area only (in QGIS or Python):
+   Keep only COUNTYFP = '453', '491', '209'
 
 3. Run the next script:
    python scripts/02_clean_incidents.py
