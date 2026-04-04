@@ -10,7 +10,7 @@ Usage:
 
 Input:
     raw_data/afd_response_areas.geojson
-    raw_data/travis_county_tracts.shp (or .geojson)
+    raw_data/tl_2023_48_tract.shp (or similar census tract shapefile for Austin-area counties)
     raw_data/census_population.csv
     raw_data/census_housing.csv
     raw_data/census_year_built.csv
@@ -25,7 +25,7 @@ import pandas as pd
 import geopandas as gpd
 import os
 import warnings
-from census_variables import YEAR_BUILT_VARS, HOUSING_VARS, POPULATION_VARS
+from census_variables import YEAR_BUILT_VARS, HOUSING_VARS, POPULATION_VARS, AUSTIN_COUNTIES
 
 warnings.filterwarnings('ignore')
 
@@ -47,12 +47,11 @@ def load_response_areas():
 
 
 def load_census_tracts():
-    """Load census tract boundaries for Travis County"""
+    """Load census tract boundaries for Austin-area Counties"""
     print("\nLoading census tract boundaries...")
     
     # Try different possible file locations
     possible_paths = [
-        "raw_data/travis_county_tracts.geojson",
         "raw_data/tl_2023_48_tract.shp",
         "raw_data/tl_2023_48_tract/tl_2023_48_tract.shp",
         "raw_data/tl_2022_48_tract.shp",
@@ -75,7 +74,7 @@ def load_census_tracts():
     
     print(f"  Loaded {len(tracts)} tracts (all Texas)")
     
-    # Filter to Travis County
+    # Filter to Austin-Area Counties (Travis, Hays, Williamson)
     county_col = None
     for col in ['COUNTYFP', 'COUNTYFP20', 'COUNTYFP10']:
         if col in tracts.columns:
@@ -83,8 +82,8 @@ def load_census_tracts():
             break
     
     if county_col:
-        tracts = tracts[tracts[county_col] == '453']
-        print(f"  Filtered to Travis County: {len(tracts)} tracts")
+        tracts = tracts[tracts[county_col].isin(AUSTIN_COUNTIES.values())]
+        print(f"  Filtered to Austin-area Counties: {len(tracts)} tracts")
     
     return tracts
 
@@ -259,10 +258,6 @@ def create_crosswalk(tracts_gdf, response_areas_gdf):
     
     if geoid_col != 'GEOID':
         tracts['GEOID'] = tracts[geoid_col]
-    
-    # Make sure GEOID is full 11-character format (state + county + tract)
-    if tracts['GEOID'].str.len().max() == 6:  # Just tract code
-        tracts['GEOID'] = '48453' + tracts['GEOID'].astype(str).str.zfill(6)
     
     # Find response area ID column
     ra_id_col = None

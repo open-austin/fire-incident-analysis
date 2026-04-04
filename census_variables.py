@@ -1,5 +1,12 @@
 # Census variable definitions for ATX fire resource analysis
 
+# Counties
+AUSTIN_COUNTIES = {
+    "TRAVIS": '453', 
+    "HAYS": '209', 
+    "WILLIAMSON": '491',
+    }
+
 # B25034: Year structure built
 YEAR_BUILT_VARS = {
     "B25034_001E": "Total",
