@@ -1,6 +1,7 @@
 # Data files - too large for GitHub, can be regenerated
 raw_data/
 outputs/
+notebooks/
 
 # Python
 __pycache__/
