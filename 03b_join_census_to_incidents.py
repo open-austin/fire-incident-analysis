@@ -17,7 +17,6 @@ Output:
 
 import pandas as pd
 import geopandas as gpd
-from shapely.geometry import Point
 
 def join_census_to_incidents(incident_data_path, tract_shapefile_path, output_path):
     # Load incident data
@@ -25,7 +24,7 @@ def join_census_to_incidents(incident_data_path, tract_shapefile_path, output_pa
     incidents = incidents[incidents['incident_category'] == 'Structure Fire'] # Only interested in structure fires for this analysis
     
     # Removing unneeded columns
-    incidents.drop(columns=['is_structure_fire','is_vehicle_fire','is_outdoor_fire','is_trash_fire','incident_category'], inplace = True)
+    incidents.drop(columns=['jurisdiction','is_structure_fire','is_vehicle_fire','is_outdoor_fire','is_trash_fire','incident_category'], inplace = True)
     
     # Cleaning out missing lat/long values
     incidents_clean = incidents.dropna(subset=['latitude', 'longitude']).reset_index(drop=True)
@@ -39,7 +38,8 @@ def join_census_to_incidents(incident_data_path, tract_shapefile_path, output_pa
     
     # Ensure the coordinate reference systems match
     tracts = tracts.to_crs(epsg=4326)  # WGS 84
-    tracts = tracts.rename(columns={'NAME': 'Census Tract'})
+    tracts = tracts.rename(columns={'NAME': 'Census Tract', 'TRACTCE': 'Tract Code'})
+
 
     incidents_gdf = gpd.GeoDataFrame(
         incidents_clean, 
@@ -49,6 +49,7 @@ def join_census_to_incidents(incident_data_path, tract_shapefile_path, output_pa
     
     # For each incident, find all census tracts it touches (including boundary tracts)
     tract_arrays = []
+    tract_code_arrays = []
     boundary_count = 0
     
     for idx, incident in incidents_gdf.iterrows():
@@ -59,18 +60,22 @@ def join_census_to_incidents(incident_data_path, tract_shapefile_path, output_pa
         
         if len(touching_tracts) > 0:
             tract_list = touching_tracts['Census Tract'].tolist()
+            tract_code_list = touching_tracts['Tract Code'].tolist()
             if len(tract_list) > 1:
                 boundary_count += 1
         else:
             tract_list = [None]
+            tract_code_list = [None]
         
         tract_arrays.append(tract_list)
+        tract_code_arrays.append(tract_code_list)
     
     # Add the tract array to the dataframe
     incidents_gdf['census_tracts'] = tract_arrays
+    incidents_gdf['tract_codes'] = tract_code_arrays
     
     # Select relevant columns
-    output_cols = incidents.columns.to_list() + ['census_tracts']
+    output_cols = incidents.columns.to_list() + ['census_tracts', 'tract_codes']
     result_gdf = incidents_gdf[output_cols].copy()
     
     # Count incidents with tract assignments
