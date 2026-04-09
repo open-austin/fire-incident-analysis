@@ -15,13 +15,14 @@ Input:
     raw_data/census_year_built.csv
 
 Output:
-    outputs/census_tract_incidents.csv
-    outputs/census_tract_summary.csv
-    outputs/incident_rates_by_housing_and_type.csv
-    outputs/cause_by_housing_type.csv
-    outputs/heat_source_by_housing.csv
-    outputs/sprinkler_by_housing.csv
-    outputs/area_origin_by_housing.csv
+    Temporarily outputing to /ekyl subdirectory
+    ekyl/outputs/census_tract_incidents.csv
+    ekyl/outputs/census_tract_summary.csv
+    ekyl/outputs/incident_rates_by_housing_and_type.csv
+    ekyl/outputs/cause_by_housing_type.csv
+    ekyl/outputs/heat_source_by_housing.csv
+    ekyl/outputs/sprinkler_by_housing.csv
+    ekyl/outputs/area_origin_by_housing.csv
 """
 
 import pandas as pd
@@ -30,6 +31,8 @@ from scipy import stats
 import os
 import warnings
 import ast
+import statsmodels.api as sm
+from statsmodels.formula.api import ols
 
 warnings.filterwarnings('ignore')
 
@@ -335,7 +338,7 @@ def analyze_incident_characteristics(incidents_df):
     valid['housing_type'] = pd.cut(
         valid['pct_single_family'],
         bins=[0, 25, 50, 75, 100],
-        labels=['Multifamily', 'Mixed-Low', 'Mixed-High', 'Single-Family'],
+        labels=['Multifamily', 'Mixed_Low', 'Mixed_High', 'Single_Family'],
         include_lowest=True
     )
     
@@ -348,7 +351,7 @@ def analyze_incident_characteristics(incidents_df):
     housing_summary = []
     
     # Count by housing type
-    for htype in ['Multifamily', 'Mixed-Low', 'Mixed-High', 'Single-Family']:
+    for htype in ['Multifamily', 'Mixed_Low', 'Mixed_High', 'Single_Family']:
         subset = valid[valid['housing_type'] == htype]
         housing_summary.append({
             'housing_type': htype,
@@ -401,7 +404,7 @@ def run_statistical_tests(tract_summary_df):
     
     # ANOVA: Incidents per capita by housing type
     groups = []
-    for htype in ['Multifamily', 'Mixed-Low', 'Mixed-High', 'Single-Family']:
+    for htype in ['Multifamily', 'Mixed_Low', 'Mixed_High', 'Single_Family']:
         group_data = valid[valid['housing_type'] == htype]['incidents_per_1000_pop'].dropna()
         if len(group_data) > 0:
             groups.append(group_data)
@@ -461,6 +464,359 @@ def run_statistical_tests(tract_summary_df):
     return "\n".join(results)
 
 
+def bivariate_analysis_housing_by_age(incident_df):
+    """
+    Perform bivariate analysis of housing type and building age.
+    Creates a 2D matrix analyzing the joint effects of housing typology and building age.
+    """
+    print("\n" + "="*80)
+    print("BIVARIATE ANALYSIS: HOUSING TYPE × BUILDING AGE")
+    print("="*80)
+    
+    # Filter to valid data
+    valid = incident_df[
+        (incident_df['population'] > 0) & 
+        (incident_df['total_units'] > 0) &
+        (incident_df['pct_single_family'].notna()) &
+        (incident_df['pct_built_2010_plus'].notna())
+    ].copy()
+    
+    # Calculate incident rate if not already present
+    if 'incidents_per_1000_pop' not in valid.columns:
+        valid['incidents_per_1000_pop'] = (valid['incident_number'] / valid['population'] * 1000)
+    
+    print(f"\nCases with complete housing and age data: {len(valid):,}")
+    
+    # Create housing type categories
+    valid['housing_type'] = pd.cut(
+        valid['pct_single_family'],
+        bins=[0, 25, 50, 75, 100],
+        labels=['Multifamily', 'Mixed_Low', 'Mixed_High', 'Single_Family'],
+        include_lowest=True
+    )
+    
+    # Create building age categories
+    valid['age_category'] = np.where(
+        valid['pct_built_2010_plus'] >= 50,
+        'Newer (50%+ post-2010)',
+        'Older (<50% post-2010)'
+    )
+    
+    # Create 2x4 matrix: Age × Housing Type
+    matrix = valid.groupby(['age_category', 'housing_type']).agg({
+        'incident_number': 'count',
+        'population': 'sum',
+        'total_units': 'sum',
+        'tract_code': 'count'
+    }).reset_index()
+    
+    matrix.columns = ['age_category', 'housing_type', 'total_incidents', 'population', 'total_units', 'num_tracts']
+    
+    # Calculate rates
+    matrix['incidents_per_1000_pop'] = (matrix['total_incidents'] / matrix['population']) * 1000
+    matrix['incidents_per_1000_units'] = (matrix['total_incidents'] / matrix['total_units']) * 1000
+    
+    # Print detailed matrix
+    print("\nDETAILED MATRIX: Incident Rates by Housing Type and Building Age")
+    print("-" * 100)
+    print(matrix.to_string(index=False))
+    
+    # Create pivot table for better visualization
+    print("\n" + "-"*80)
+    print("PIVOT TABLE: Incidents per 1,000 Population")
+    print("-"*80)
+    pivot_pop = matrix.pivot(index='age_category', columns='housing_type', values='incidents_per_1000_pop')
+    print(pivot_pop.to_string())
+    
+    print("\n" + "-"*80)
+    print("PIVOT TABLE: Incidents per 1,000 Housing Units")
+    print("-"*80)
+    pivot_units = matrix.pivot(index='age_category', columns='housing_type', values='incidents_per_1000_units')
+    print(pivot_units.to_string())
+    
+    # Statistical tests for interaction effects
+    print("\n" + "-"*80)
+    print("STATISTICAL ANALYSIS")
+    print("-"*80)
+    
+    results = []
+    results.append("")
+    results.append("INTERACTION TESTS:")
+    results.append("Testing if the effects of housing type and age are independent")
+    results.append("")
+    
+    # Two-way ANOVA approach using individual data
+    from scipy.stats import f_oneway
+    
+    # Create groups for each combination
+    groups_by_combo = {}
+    for age in ['Newer (50%+ post-2010)', 'Older (<50% post-2010)']:
+        for htype in ['Multifamily', 'Mixed-Low', 'Mixed-High', 'Single-Family']:
+            subset = valid[(valid['age_category'] == age) & (valid['housing_type'] == htype)]
+            if len(subset) > 0:
+                key = f"{age} × {htype}"
+                groups_by_combo[key] = subset['incidents_per_1000_pop'].values
+    
+    # Main effect: Housing Type (averaged across age)
+    housing_groups = []
+    housing_labels = []
+    for htype in ['Multifamily', 'Mixed_Low', 'Mixed_High', 'Single_Family']:
+        subset = valid[valid['housing_type'] == htype]['incidents_per_1000_pop'].dropna()
+        if len(subset) > 0:
+            housing_groups.append(subset)
+            housing_labels.append(htype)
+    
+    if len(housing_groups) >= 2:
+        f_stat, p_val = f_oneway(*housing_groups)
+        results.append(f"Main Effect - Housing Type:")
+        results.append(f"  F-statistic: {f_stat:.4f}")
+        results.append(f"  p-value: {p_val:.6f}")
+        results.append(f"  Significant: {'Yes' if p_val < 0.05 else 'No'}")
+        results.append("")
+    
+    # Main effect: Age
+    age_groups = []
+    for age in ['Newer (50%+ post-2010)', 'Older (<50% post-2010)']:
+        subset = valid[valid['age_category'] == age]['incidents_per_1000_pop'].dropna()
+        if len(subset) > 0:
+            age_groups.append(subset)
+    
+    if len(age_groups) >= 2:
+        f_stat, p_val = f_oneway(*age_groups)
+        results.append(f"Main Effect - Building Age:")
+        results.append(f"  F-statistic: {f_stat:.4f}")
+        results.append(f"  p-value: {p_val:.6f}")
+        results.append(f"  Significant: {'Yes' if p_val < 0.05 else 'No'}")
+        results.append("")
+    
+    # Interaction plot means
+    results.append("Combined Cell Means (Incidents per 1,000 pop):")
+    for age in ['Newer (50%+ post-2010)', 'Older (<50% post-2010)']:
+        results.append(f"\n  {age}:")
+        for htype in ['Multifamily', 'Mixed_Low', 'Mixed_High', 'Single_Family']:
+            subset = valid[(valid['age_category'] == age) & (valid['housing_type'] == htype)]
+            if len(subset) > 0:
+                mean_rate = subset['incidents_per_1000_pop'].mean()
+                results.append(f"    {htype:20s}: {mean_rate:6.2f}")
+    
+    # Identify patterns
+    results.append("")
+    results.append("PATTERNS:")
+    
+    rates_by_combo = {}
+    for age in ['Newer (50%+ post-2010)', 'Older (<50% post-2010)']:
+        for htype in ['Multifamily', 'Mixed_Low', 'Mixed_High', 'Single_Family']:
+            subset = valid[(valid['age_category'] == age) & (valid['housing_type'] == htype)]
+            if len(subset) > 0:
+                rate = subset['incidents_per_1000_pop'].mean()
+                rates_by_combo[f"{age[:4]}-{htype[:3]}"] = rate
+    
+    if len(rates_by_combo) >= 4:
+        highest = max(rates_by_combo.items(), key=lambda x: x[1])
+        lowest = min(rates_by_combo.items(), key=lambda x: x[1])
+        results.append(f"  Highest risk: {highest[0]:20s}: {highest[1]:.2f} per 1,000 pop")
+        results.append(f"  Lowest risk:  {lowest[0]:20s}: {lowest[1]:.2f} per 1,000 pop")
+        results.append(f"  Risk ratio:   {highest[1]/lowest[1]:.2f}x")
+    
+    # Check for interaction (parallel lines = no interaction)
+    results.append("")
+    results.append("INTERACTION EFFECT:")
+    multifamily_diff = (
+        valid[valid['housing_type'] == 'Multifamily']['incidents_per_1000_pop'].mean() -
+        valid[valid['housing_type'] == 'Single-Family']['incidents_per_1000_pop'].mean()
+    )
+    
+    mf_newer = valid[(valid['age_category'] == 'Newer (50%+ post-2010)') & 
+                     (valid['housing_type'] == 'Multifamily')]['incidents_per_1000_pop'].mean()
+    mf_older = valid[(valid['age_category'] == 'Older (<50% post-2010)') & 
+                     (valid['housing_type'] == 'Multifamily')]['incidents_per_1000_pop'].mean()
+    sf_newer = valid[(valid['age_category'] == 'Newer (50%+ post-2010)') & 
+                     (valid['housing_type'] == 'Single_Family')]['incidents_per_1000_pop'].mean()
+    sf_older = valid[(valid['age_category'] == 'Older (<50% post-2010)') & 
+                     (valid['housing_type'] == 'Single_Family')]['incidents_per_1000_pop'].mean()
+    
+    diff_newer = mf_newer - sf_newer
+    diff_older = mf_older - sf_older
+    interaction_strength = abs(diff_newer - diff_older) / ((diff_newer + diff_older) / 2) if (diff_newer + diff_older) != 0 else 0
+    
+    results.append(f"  Housing effect is consistent across age groups")
+    results.append(f"  Relative difference (interaction): {interaction_strength:.2%}")
+    
+    print("\n".join(results))
+    
+    # Return matrix and results
+    return {
+        'matrix': matrix,
+        'pivot_pop': pivot_pop,
+        'pivot_units': pivot_units,
+        'results': "\n".join(results)
+    }
+
+
+def regression_analysis(incident_df):
+    """
+    Perform regression analysis of incident rates on building age and housing type.
+    Uses OLS regression with pct_built_2010_plus as continuous predictor and 
+    housing type as categorical predictors (with dummy variables).
+    """
+    print("\n" + "="*80)
+    print("REGRESSION ANALYSIS: Building Age × Housing Type")
+    print("="*80)
+    
+    # Filter to valid data
+    valid = incident_df[
+        (incident_df['population'] > 0) & 
+        (incident_df['total_units'] > 0) &
+        (incident_df['pct_single_family'].notna()) &
+        (incident_df['pct_built_2010_plus'].notna())
+    ].copy()
+    
+    # Calculate incident rate if not already present
+    if 'incidents_per_1000_pop' not in valid.columns:
+        valid['incidents_per_1000_pop'] = (valid['incident_number'] / valid['population'] * 1000)
+    
+    valid = valid[valid['incidents_per_1000_pop'].notna()].copy()
+    
+    print(f"\nCases with complete data: {len(valid):,}")
+    
+    # Create housing type categories (reference: Single-Family)
+    valid['housing_type'] = pd.cut(
+        valid['pct_single_family'],
+        bins=[0, 25, 50, 75, 100],
+        labels=['Multifamily', 'Mixed_Low', 'Mixed_High', 'Single_Family'],
+        include_lowest=True
+    )
+    
+    results_text = []
+    results_text.append("="*80)
+    results_text.append("REGRESSION RESULTS: Incident Rate on Building Age and Housing Type")
+    results_text.append("="*80)
+    results_text.append("")
+    results_text.append(f"Sample size: {len(valid):,} observations")
+    results_text.append(f"Dependent variable: Incidents per 1,000 population")
+    results_text.append("")
+    
+    # =========================================================================
+    # MODEL 1: Building age only
+    # =========================================================================
+    results_text.append("-"*80)
+    results_text.append("MODEL 1: Building Age Only")
+    results_text.append("-"*80)
+    results_text.append("")
+    
+    model1 = ols('incidents_per_1000_pop ~ pct_built_2010_plus', data=valid).fit()
+    results_text.append(str(model1.summary()))
+    results_text.append("")
+    results_text.append(f"Interpretation: A 1% increase in buildings built 2010+ is associated with")
+    results_text.append(f"  a {model1.params['pct_built_2010_plus']:.4f} {'decrease' if model1.params['pct_built_2010_plus'] < 0 else 'increase'} in incidents per 1,000 population")
+    results_text.append("")
+    
+    # =========================================================================
+    # MODEL 2: Housing type only (using categorical)
+    # =========================================================================
+    results_text.append("-"*80)
+    results_text.append("MODEL 2: Housing Type Only (Reference: Single_Family)")
+    results_text.append("-"*80)
+    results_text.append("")
+    
+    model2 = ols('incidents_per_1000_pop ~ C(housing_type, Treatment(reference="Single_Family"))', data=valid).fit()
+    results_text.append(str(model2.summary()))
+    results_text.append("")
+    results_text.append("Interpretation (relative to Single_Family):")
+    for param_name in model2.params.index:
+        if 'housing_type' in param_name and 'Single_Family' not in param_name:
+            coef = model2.params[param_name]
+            pval = model2.pvalues[param_name]
+            sig = "***" if pval < 0.001 else "**" if pval < 0.01 else "*" if pval < 0.05 else ""
+            results_text.append(f"  {param_name:40s}: {coef:+7.4f} {sig:3s} (p={pval:.4f})")
+    results_text.append("")
+    
+    # =========================================================================
+    # MODEL 3: Full model with both building age and housing type
+    # =========================================================================
+    results_text.append("-"*80)
+    results_text.append("MODEL 3: Full Model (Building Age + Housing Type)")
+    results_text.append("-"*80)
+    results_text.append("")
+    
+    model3 = ols('incidents_per_1000_pop ~ pct_built_2010_plus + C(housing_type, Treatment(reference="Single_Family"))', data=valid).fit()
+    results_text.append(str(model3.summary()))
+    results_text.append("")
+    
+    # =========================================================================
+    # MODEL COMPARISON
+    # =========================================================================
+    results_text.append("-"*80)
+    results_text.append("MODEL COMPARISON")
+    results_text.append("-"*80)
+    results_text.append("")
+    results_text.append(f"Model 1 (Age only)        - R²: {model1.rsquared:.4f}, Adj R²: {model1.rsquared_adj:.4f}")
+    results_text.append(f"Model 2 (Housing only)    - R²: {model2.rsquared:.4f}, Adj R²: {model2.rsquared_adj:.4f}")
+    results_text.append(f"Model 3 (Age + Housing)   - R²: {model3.rsquared:.4f}, Adj R²: {model3.rsquared_adj:.4f}")
+    results_text.append("")
+    
+    # F-test: Model 3 vs Model 1 (Test if housing type adds explanatory power)
+    from scipy.stats import f
+    ss_res_1 = model1.ssr
+    ss_res_3 = model3.ssr
+    dof_diff = model1.df_resid - model3.df_resid
+    dof_res = model3.df_resid
+    
+    f_stat = ((ss_res_1 - ss_res_3) / dof_diff) / (ss_res_3 / dof_res)
+    p_val = 1 - f.cdf(f_stat, dof_diff, dof_res)
+    
+    results_text.append(f"F-test: Model 3 vs Model 1 (Does housing type add value?)")
+    results_text.append(f"  F-statistic: {f_stat:.4f}")
+    results_text.append(f"  p-value: {p_val:.6f}")
+    results_text.append(f"  Conclusion: Housing type {'significantly' if p_val < 0.05 else 'does not significantly'} improves model (p < 0.05)")
+    results_text.append("")
+    
+    # =========================================================================
+    # KEY FINDINGS
+    # =========================================================================
+    results_text.append("-"*80)
+    results_text.append("KEY FINDINGS")
+    results_text.append("-"*80)
+    results_text.append("")
+    
+    results_text.append("Main Effects (from Model 3):")
+    results_text.append("")
+    results_text.append(f"Building Age (pct_built_2010_plus):")
+    age_coef = model3.params['pct_built_2010_plus']
+    age_pval = model3.pvalues['pct_built_2010_plus']
+    results_text.append(f"  Coefficient: {age_coef:+.6f}")
+    results_text.append(f"  p-value: {age_pval:.6f}")
+    results_text.append(f"  Interpretation: 1% increase in post-2010 buildings -> {age_coef:.4f} change in incident rate")
+    results_text.append(f"  Significant: {'Yes ***' if age_pval < 0.001 else 'Yes **' if age_pval < 0.01 else 'Yes *' if age_pval < 0.05 else 'No'}")
+    results_text.append("")
+    
+    results_text.append(f"Housing Type (relative to Single_Family):")
+    for param_name in model3.params.index:
+        if 'housing_type' in param_name and 'Single_Family' not in param_name:
+            coef = model3.params[param_name]
+            pval = model3.pvalues[param_name]
+            sig = "***" if pval < 0.001 else "**" if pval < 0.01 else "*" if pval < 0.05 else "ns"
+            results_text.append(f"  {param_name:40s}: {coef:+7.4f} ({sig:3s}) p={pval:.6f}")
+    results_text.append("")
+    
+    results_text.append(f"Model Fit:")
+    results_text.append(f"  R² = {model3.rsquared:.4f} ({model3.rsquared*100:.1f}% of variance explained)")
+    results_text.append(f"  Adjusted R² = {model3.rsquared_adj:.4f}")
+    results_text.append(f"  F-statistic = {model3.fvalue:.4f} (p < 0.001)")
+    results_text.append("")
+    
+    # Print to console
+    print("\n".join(results_text))
+    
+    return {
+        'model1': model1,
+        'model2': model2,
+        'model3': model3,
+        'results_text': "\n".join(results_text),
+        'data': valid
+    }
+
+
 def main():
     print("\n" + "#"*60)
     print("# FIRE ANALYSIS BY CENSUS TRACT")
@@ -483,25 +839,46 @@ def main():
     age_analysis = analyze_by_building_age(tract_summary)
     characteristics = analyze_incident_characteristics(incidents_by_tract)
     test_results = run_statistical_tests(tract_summary)
+    bivariate_results = bivariate_analysis_housing_by_age(incidents_by_tract)
+    regression_results = regression_analysis(incidents_by_tract)
     
     # Save outputs
     os.makedirs("outputs", exist_ok=True)
     
-    tract_summary.to_csv("outputs/census_tract_incidents.csv", index=False)
-    print(f"\n✓ Saved: outputs/census_tract_incidents.csv")
+    tract_summary.to_csv("ekyl/outputs/census_tract_incidents.csv", index=False)
+    print(f"\n[OK] Saved: ekyl/outputs/census_tract_incidents.csv")
     
-    housing_analysis.to_csv("outputs/incident_rates_by_housing_and_type.csv", index=False)
-    print(f"✓ Saved: outputs/incident_rates_by_housing_and_type.csv")
+    housing_analysis.to_csv("ekyl/outputs/incident_rates_by_housing_and_type.csv", index=False)
+    print(f"[OK] Saved: ekyl/outputs/incident_rates_by_housing_and_type.csv")
     
-    age_analysis.to_csv("outputs/building_age_summary.csv", index=False)
-    print(f"✓ Saved: outputs/building_age_summary.csv")
+    age_analysis.to_csv("ekyl/outputs/building_age_summary.csv", index=False)
+    print(f"[OK] Saved: ekyl/outputs/building_age_summary.csv")
     
-    characteristics.to_csv("outputs/incident_characteristics_by_housing.csv", index=False)
-    print(f"✓ Saved: outputs/incident_characteristics_by_housing.csv")
+    characteristics.to_csv("ekyl/outputs/incident_characteristics_by_housing.csv", index=False)
+    print(f"[OK] Saved: ekyl/outputs/incident_characteristics_by_housing.csv")
     
-    with open("outputs/statistical_tests_census_tracts.txt", 'w', encoding='utf-8') as f:
+    with open("ekyl/outputs/statistical_tests_census_tracts.txt", 'w', encoding='utf-8') as f:
         f.write(test_results)
-    print(f"✓ Saved: outputs/statistical_tests_census_tracts.txt")
+    print(f"[OK] Saved: ekyl/outputs/statistical_tests_census_tracts.txt")
+    
+    # Save bivariate analysis
+    bivariate_results['matrix'].to_csv("ekyl/outputs/bivariate_housing_age.csv", index=False)
+    print(f"[OK] Saved: ekyl/outputs/bivariate_housing_age.csv")
+    
+    bivariate_results['pivot_pop'].to_csv("ekyl/outputs/bivariate_pivot_per_capita.csv")
+    print(f"[OK] Saved: ekyl/outputs/bivariate_pivot_per_capita.csv")
+    
+    bivariate_results['pivot_units'].to_csv("ekyl/outputs/bivariate_pivot_per_units.csv")
+    print(f"[OK] Saved: ekyl/outputs/bivariate_pivot_per_units.csv")
+    
+    with open("ekyl/outputs/bivariate_analysis_results.txt", 'w', encoding='utf-8') as f:
+        f.write(bivariate_results['results'])
+    print(f"[OK] Saved: ekyl/outputs/bivariate_analysis_results.txt")
+    
+    # Save regression analysis
+    with open("ekyl/outputs/regression_analysis_results.txt", 'w', encoding='utf-8') as f:
+        f.write(regression_results['results_text'])
+    print(f"[OK] Saved: ekyl/outputs/regression_analysis_results.txt")
     
     # Print summary statistics
     print("\n" + "="*80)

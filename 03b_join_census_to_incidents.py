@@ -24,7 +24,7 @@ def join_census_to_incidents(incident_data_path, tract_shapefile_path, output_pa
     incidents = incidents[incidents['incident_category'] == 'Structure Fire'] # Only interested in structure fires for this analysis
     
     # Removing unneeded columns
-    incidents.drop(columns=['jurisdiction','is_structure_fire','is_vehicle_fire','is_outdoor_fire','is_trash_fire','incident_category'], inplace = True)
+    incidents.drop(columns=['call_type','jurisdiction','is_structure_fire','is_vehicle_fire','is_outdoor_fire','is_trash_fire','incident_category'], inplace = True)
     
     # Cleaning out missing lat/long values
     incidents_clean = incidents.dropna(subset=['latitude', 'longitude']).reset_index(drop=True)
