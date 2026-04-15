@@ -14,6 +14,7 @@ Input:
     raw_data/census_population.csv
     raw_data/census_housing.csv
     raw_data/census_year_built.csv
+    raw_data/census_income.csv
 
 Output:
     processed_data/tract_to_response_area_crosswalk.csv
@@ -108,10 +109,18 @@ def load_census_data():
     else:
         print("  Warning: Year built data not found")
 
-    return pop, housing, year_built
+    # Income
+    income = None
+    if os.path.exists("raw_data/census_income.csv"):
+        income = pd.read_csv("raw_data/census_income.csv")
+        print(f"  Income data: {len(income)} rows")
+    else:
+        print("  Warning: Income data not found")
+
+    return pop, housing, year_built, income
 
 
-def process_census_data(pop_df, housing_df, year_built_df=None):
+def process_census_data(pop_df, housing_df, year_built_df=None, income_df=None):
     """
     Process census data into usable format.
     Census API returns data with header row, need to handle that.
@@ -224,13 +233,37 @@ def process_census_data(pop_df, housing_df, year_built_df=None):
             how='left'
         )
 
+
         print(f"    Buildings 2010+: {census['built_2010_plus'].sum():,.0f}")
         print(f"    Buildings 1970-2009: {census['built_1970_2009'].sum():,.0f}")
         print(f"    Buildings pre-1970: {census['built_pre_1970'].sum():,.0f}")
 
+        
+    # Extract Income Data
+    if income_df is not None:
+        print("  Processing year built data...")
+
+        # Create GEOID
+        if 'state' in income_df.columns:
+            income_df['GEOID'] = (income_df['state'].astype(str).str.zfill(2) +
+                                      income_df['county'].astype(str).str.zfill(3) +
+                                      income_df['tract'].astype(str).str.zfill(6))
+    
+        # Only extract relevant income columns
+        # This file collates the column codes and the human-readable labels, leaving coded columns blank.
+        # So, only extract based on the column code.
+        # In future, if this is buggy, pick the column index based on code, and increment by one.
+        income_df = income_df[['GEOID', 'Estimate!!Households!!Median income (dollars)']].rename(columns={'Estimate!!Households!!Median income (dollars)': 'median_income'})  
+        census = census.merge(
+                income_df[['GEOID', 'median_income']],
+                on='GEOID',
+                how='left'
+            )
+
     print(f"  Combined census data: {len(census)} tracts")
     print(f"  Total population: {census['population'].sum():,.0f}")
     print(f"  Total housing units: {census['total_units'].sum():,.0f}")
+    print(f"  Average median income: {census['median_income'].mean():,.0f}")
 
     return census
 
@@ -393,10 +426,10 @@ def main():
     # Load data
     response_areas = load_response_areas()
     tracts = load_census_tracts()
-    pop_df, housing_df, year_built_df = load_census_data()
+    pop_df, housing_df, year_built_df, income_df = load_census_data()
 
     # Process census data
-    census = process_census_data(pop_df, housing_df, year_built_df)
+    census = process_census_data(pop_df, housing_df, year_built_df, income_df)
     
     # Create crosswalk
     crosswalk, ra_id_col = create_crosswalk(tracts, response_areas)

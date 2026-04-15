@@ -13,6 +13,7 @@ Input:
     raw_data/census_population.csv
     raw_data/census_housing.csv
     raw_data/census_year_built.csv
+    raw_data/census_income.csv
 
 Output:
     outputs/census_tract_incidents.csv
@@ -26,10 +27,11 @@ Output:
 
 import pandas as pd
 import numpy as np
-from scipy import stats
 import os
 import warnings
+from scipy import stats
 import ast
+from census_variables import YEAR_BUILT_VARS, HOUSING_VARS, POPULATION_VARS
 
 warnings.filterwarnings('ignore')
 
@@ -71,21 +73,37 @@ def load_data():
     # Check coverage
     has_tract = incidents['tract_list'].apply(len) > 0
     print(f"  Incidents with tract data: {has_tract.sum():,} ({has_tract.sum()/len(incidents)*100:.1f}%)")
+
     
     # Load census demographics
     pop_data = pd.read_csv("raw_data/census_population.csv", dtype={'tract': str})
+    pop_data = pop_data.rename(columns={'B01003_001E': POPULATION_VARS['B01003_001E']})
     print(f"  Census tracts with population: {len(pop_data)}")
     
     housing_data = pd.read_csv("raw_data/census_housing.csv", dtype={'tract': str})
+    for c in housing_data.columns:
+        housing_data.rename(columns={c: HOUSING_VARS.get(c, c)}, inplace=True)
+
     print(f"  Census tracts with housing: {len(housing_data)}")
     
     age_data = pd.read_csv("raw_data/census_year_built.csv", dtype={'tract': str})
+    for c in age_data.columns:
+        age_data.rename(columns={c: YEAR_BUILT_VARS.get(c, c)}, inplace=True)
     print(f"  Census tracts with building age: {len(age_data)}")
     
-    return incidents, pop_data, housing_data, age_data
+    income_data = pd.read_csv("raw_data/census_income.csv", dtype={'tract': str})
+    # Only extract relevant income columns
+    # This file collates the column codes and the human-readable labels, leaving coded columns blank.
+    # So, only extract based on the column code.
+    # In future, if this is buggy, pick the column index based on code, and increment by one.
+    income_data = income_data[['tract', 'Estimate!!Households!!Median income (dollars)']]
+    
+    print(f"  Census tracts with income: {len(income_data)}")
+    
+    return incidents, pop_data, housing_data, age_data, income_data
 
 # Make sure this averages out the census demographics in the case of boundaries.
-def prepare_census_demographics(pop_data, housing_data, age_data):
+def prepare_census_demographics(pop_data, housing_data, age_data, income_data):
     """
     Merge census demographic files into a single dataframe by tract code.
     """
@@ -95,12 +113,14 @@ def prepare_census_demographics(pop_data, housing_data, age_data):
     pop_data = pop_data.rename(columns={'Total population': 'population', 'tract': 'tract_code'})
     housing_data = housing_data.rename(columns={'Total': 'total_units', 'tract': 'tract_code'})
     age_data = age_data.rename(columns={'Total': 'total_units_age', 'tract': 'tract_code'})
+    income_data = income_data.rename(columns={'Estimate!!Households!!Median income (dollars)': 'median_income', 'tract': 'tract_code'})
     
     # Convert tract codes to strings
     pop_data['tract_code'] = pop_data['tract_code'].astype(str)
     housing_data['tract_code'] = housing_data['tract_code'].astype(str)
     age_data['tract_code'] = age_data['tract_code'].astype(str)
-    
+    income_data['tract_code'] = income_data['tract_code'].astype(str)
+
     # Merge population with housing
     census = pop_data[['tract_code', 'population']].merge(
         housing_data[['tract_code', 'total_units', '1-unit, detached', '1-unit, attached']],
@@ -137,6 +157,13 @@ def prepare_census_demographics(pop_data, housing_data, age_data):
         np.nan
     )
     
+    # Merge with income data
+    census = census.merge(
+        income_data[['tract_code', 'median_income']],
+        on='tract_code',
+        how='left'
+    )
+    
     print(f"  Census tracts in demographics: {len(census)}")
     
     return census
@@ -164,7 +191,7 @@ def explode_incidents_by_tract(incidents_df, census_df):
 
     exploded = exploded.merge(
         census_df[['tract_code', 'population', 'total_units', 'pct_single_family', 
-                        'pct_built_2010_plus', 'pct_built_pre1970']],
+                        'pct_built_2010_plus', 'pct_built_pre1970', 'median_income']],
         on='tract_code',
         how='left'
     )
@@ -196,11 +223,12 @@ def aggregate_by_tract(incidents_df):
         'pct_single_family': 'first',
         'pct_built_2010_plus': 'first',
         'pct_built_pre1970': 'first',
+        'median_income': 'first',
         'calendaryear': lambda x: x.nunique()  # years of data
     }).reset_index()
     
     tract_summary.columns = ['tract_code', 'total_incidents', 'population', 'total_units',
-                             'pct_single_family', 'pct_built_2010_plus', 'pct_built_pre1970', 'years']
+                             'pct_single_family', 'pct_built_2010_plus', 'pct_built_pre1970', 'median_income', 'years']
     
     # Calculate per-capita and per-unit rates
     tract_summary['incidents_per_1000_pop'] = np.where(
@@ -467,14 +495,15 @@ def main():
     print("#"*60)
     
     # Load data
-    incidents, pop_data, housing_data, age_data = load_data()
+    incidents, pop_data, housing_data, age_data, income_data = load_data()
     
     # Prepare census demographics
-    census = prepare_census_demographics(pop_data, housing_data, age_data)
-    
+    census = prepare_census_demographics(pop_data, housing_data, age_data, income_data)
+    census.to_csv("processed_data/census_demographics.csv", index=False)
+
     # Explode incidents by tract and join with demographics
     incidents_by_tract = explode_incidents_by_tract(incidents, census)
-    
+
     # Aggregate to tract level
     tract_summary = aggregate_by_tract(incidents_by_tract)
     
