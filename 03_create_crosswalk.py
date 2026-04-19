@@ -241,7 +241,7 @@ def process_census_data(pop_df, housing_df, year_built_df=None, income_df=None):
         
     # Extract Income Data
     if income_df is not None:
-        print("  Processing year built data...")
+        print("  Processing income data...")
 
         # Create GEOID
         if 'state' in income_df.columns:
@@ -259,11 +259,12 @@ def process_census_data(pop_df, housing_df, year_built_df=None, income_df=None):
                 on='GEOID',
                 how='left'
             )
-
+        
     print(f"  Combined census data: {len(census)} tracts")
     print(f"  Total population: {census['population'].sum():,.0f}")
     print(f"  Total housing units: {census['total_units'].sum():,.0f}")
-    print(f"  Average median income: {census['median_income'].mean():,.0f}")
+    if income_df is not None:
+        print(f"  Average median income: {census['median_income'].mean():,.0f}")
 
     return census
 
@@ -293,20 +294,7 @@ def create_crosswalk(tracts_gdf, response_areas_gdf):
         tracts['GEOID'] = tracts[geoid_col]
     
     # Find response area ID column
-    ra_id_col = None
-    for col in ra.columns:
-        col_lower = col.lower()
-        if 'response' in col_lower or ('area' in col_lower and 'id' not in col_lower):
-            if ra[col].dtype == 'object' or ra[col].dtype == 'int64':
-                ra_id_col = col
-                break
-    
-    if ra_id_col is None:
-        # Use first non-geometry column as ID
-        ra_id_col = [c for c in ra.columns if c != 'geometry'][0]
-    
-    print(f"  Using tract ID column: GEOID")
-    print(f"  Using response area ID column: {ra_id_col}")
+    ra_id_col = 'RESPONSE_AREA_NAME' # Hyphenated alpha-numeric to match incidents dataset.
     
     # Intersect tracts with response areas
     print("  Computing intersection (this may take a moment)...")
