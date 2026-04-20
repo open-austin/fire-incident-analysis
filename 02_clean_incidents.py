@@ -17,7 +17,6 @@ Output:
 """
 
 import pandas as pd
-import os
 
 def load_and_inspect(filepath):
     """Load CSV and print basic info"""
