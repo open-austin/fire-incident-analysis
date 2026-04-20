@@ -17,11 +17,11 @@
 - Relates to Pew report on multifamily building safety
 
 **Core Findings (analysis complete):**
-- Multifamily areas have 4-6x higher fire incident rates than single-family areas
-- Unintentional causes (cooking, smoking) drive the gap — not arson or equipment failure
-- Austin's 2006 sprinkler code reduced structure fires 141% in newer buildings
-- Higher %SF correlates with lower incident rates (r=-0.306, p<0.001)
-- ANOVA across urban classes is significant (p=0.001)
+- Multifamily areas have 4-6x higher fire incident rates than single-family areas ([summary data](outputs/summary_by_housing_type.csv) · [analysis script](04_analysis.py))
+- Unintentional causes (cooking, smoking) drive the gap — not arson or equipment failure ([cause data](outputs/cause_by_housing_type.csv) · [heat source data](outputs/heat_source_by_housing.csv) · [NFIRS script](06_nfirs_cause_analysis.py))
+- Austin's 2006 sprinkler code reduced structure fires 141% in newer buildings ([building age data](outputs/summary_by_building_age.csv) · [analysis script](04_analysis.py))
+- Higher %SF correlates with lower incident rates (r=-0.306, p<0.001) ([statistical tests](outputs/statistical_tests.txt) · [scatter plot](outputs/chart_housing_correlation.png))
+- ANOVA across urban classes is significant (p=0.001) ([statistical tests](outputs/statistical_tests.txt) · [urban class data](outputs/summary_by_urban_class.csv))
 
 ---
 
@@ -98,25 +98,25 @@
 
 ### Phase 3: Analysis ✅
 
-**Core Metrics Calculated:**
+**Core Metrics Calculated:** ([analysis script](04_analysis.py) · [statistical tests](outputs/statistical_tests.txt))
 
-| Metric | Result |
-|--------|--------|
-| Incidents per 1,000 pop (urban core) | 18.78 |
-| Incidents per 1,000 pop (inner suburban) | 21.92 |
-| Incidents per 1,000 pop (outer suburban) | 10.84 |
-| Structure fires per 1,000 units (MF areas) | 8.8 |
-| Structure fires per 1,000 units (SF areas) | 2.0 |
-| Correlation: %SF vs incident rate | r=-0.306 (p<0.001) |
+| Metric | Result | Source |
+|--------|--------|--------|
+| Incidents per 1,000 pop (urban core) | 18.78 | [summary_by_urban_class.csv](outputs/summary_by_urban_class.csv) |
+| Incidents per 1,000 pop (inner suburban) | 21.92 | [summary_by_urban_class.csv](outputs/summary_by_urban_class.csv) |
+| Incidents per 1,000 pop (outer suburban) | 10.84 | [summary_by_urban_class.csv](outputs/summary_by_urban_class.csv) |
+| Structure fires per 1,000 units (MF areas) | 8.8 | [summary_by_housing_type.csv](outputs/summary_by_housing_type.csv) |
+| Structure fires per 1,000 units (SF areas) | 2.0 | [summary_by_housing_type.csv](outputs/summary_by_housing_type.csv) |
+| Correlation: %SF vs incident rate | r=-0.306 (p<0.001) | [statistical_tests.txt](outputs/statistical_tests.txt) |
 
-**NFIRS Cause Analysis (completed):**
+**NFIRS Cause Analysis (completed):** ([NFIRS script](06_nfirs_cause_analysis.py))
 
-| Finding | Detail |
-|---------|--------|
-| Dominant cause in MF | Unintentional (76%), primarily cooking (24%) and smoking (18%) |
-| Dominant cause in SF | Unintentional (64%), with more equipment failure (16%) and heating (20%) |
-| Kitchen origin | 32% of MF fires vs 20% of SF fires |
-| Intentional (arson) | 6% in MF vs 10% in SF — arson is NOT driving the gap |
+| Finding | Detail | Source |
+|---------|--------|--------|
+| Dominant cause in MF | Unintentional (76%), primarily cooking (24%) and smoking (18%) | [cause_by_housing_type.csv](outputs/cause_by_housing_type.csv) · [heat_source_by_housing.csv](outputs/heat_source_by_housing.csv) |
+| Dominant cause in SF | Unintentional (64%), with more equipment failure (16%) and heating (20%) | [cause_by_housing_type.csv](outputs/cause_by_housing_type.csv) |
+| Kitchen origin | 32% of MF fires vs 20% of SF fires | [area_origin_by_housing.csv](outputs/area_origin_by_housing.csv) |
+| Intentional (arson) | 6% in MF vs 10% in SF — arson is NOT driving the gap | [cause_by_housing_type.csv](outputs/cause_by_housing_type.csv) |
 
 ### Phase 4: Deliverables (in progress)
 
@@ -131,31 +131,35 @@
 ## Key Findings & Policy Implications
 
 ### Finding 1: Multifamily areas have 4-6x higher fire rates
+> Source: [summary_by_housing_type.csv](outputs/summary_by_housing_type.csv) · [chart_incident_type_by_housing.png](outputs/chart_incident_type_by_housing.png) · [04_analysis.py](04_analysis.py)
 - **Implication for single-stair:** Higher density development will likely increase fire call volume, but the risk is driven by cooking and smoking behavior, not building type per se
 - **Implication for HOME:** Increasing density on SF lots will shift fire demand profiles
 
 ### Finding 2: Cooking and smoking drive the multifamily gap
+> Source: [cause_by_housing_type.csv](outputs/cause_by_housing_type.csv) · [heat_source_by_housing.csv](outputs/heat_source_by_housing.csv) · [area_origin_by_housing.csv](outputs/area_origin_by_housing.csv) · [chart_cause_comparison.png](outputs/chart_cause_comparison.png) · [06_nfirs_cause_analysis.py](06_nfirs_cause_analysis.py)
 - 76% of MF fires are unintentional (vs 64% SF)
 - Kitchen fires: 32% of MF fire origins (vs 20% SF)
 - Smoking: 18% of MF heat sources (vs 5% SF)
 - **Implication:** Prevention programs (cooking safety, smoking policies) may be more impactful than building code changes
 
 ### Finding 3: Austin's 2006 sprinkler code is working
+> Source: [summary_by_building_age.csv](outputs/summary_by_building_age.csv) · [chart_incident_types_by_age.png](outputs/chart_incident_types_by_age.png) · [04_analysis.py](04_analysis.py)
 - 141% lower structure fire rates in post-2010 buildings
 - **Implication for single-stair:** New 5-story buildings will have enhanced sprinkler systems, which data shows meaningfully reduces fire risk
 
 ### Finding 4: Outer suburban areas have lowest fire rates but highest coverage burden
+> Source: [station_coverage.csv](outputs/station_coverage.csv) · [map_fire_stations.html](outputs/map_fire_stations.html) · [04_analysis.py](04_analysis.py)
 - 170 sq mi per station (vs 1.3-4.4 in urban/inner suburban)
 - Similar population-per-station ratios across all classifications
 - **Implication:** The coverage challenge is geographic, not per-capita
 
 ### Confounding Variables Addressed:
 
-| Variable | Finding |
-|----------|---------|
-| **Housing age** | Controlled — older buildings have 141% higher rates; MF areas have more old stock |
-| **Income** | Not yet controlled (B19013 not yet integrated) |
-| **Commercial uses** | Partially addressed — trash fires dominate in mixed-use areas |
+| Variable | Finding | Source |
+|----------|---------|--------|
+| **Housing age** | Controlled — older buildings have 141% higher rates; MF areas have more old stock | [summary_by_building_age.csv](outputs/summary_by_building_age.csv) |
+| **Income** | Not yet controlled (B19013 not yet integrated) | — |
+| **Commercial uses** | Partially addressed — trash fires dominate in mixed-use areas | [incident_rates_by_housing_and_type.csv](outputs/incident_rates_by_housing_and_type.csv) |
 
 ---
 
