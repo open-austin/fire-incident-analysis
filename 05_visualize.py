@@ -953,8 +953,8 @@ def create_station_map(gdf, filename):
             dept = station.get('DEPARTMENT', 'Unknown')
             name = station.get('NAME', station.get('STATION_NUMBER', 'Station'))
 
-            # Color by department
-            if dept and dept.upper() in ['AFD', 'AUSTIN', 'AUSTIN FIRE']:
+            # Color by department (handle non-string/missing values)
+            if isinstance(dept, str) and dept.upper() in ['AFD', 'AUSTIN', 'AUSTIN FIRE']:
                 color = 'red'
                 icon = 'fire'
             else:
