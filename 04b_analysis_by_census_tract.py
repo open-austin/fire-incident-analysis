@@ -26,12 +26,13 @@ Output:
 """
 
 import pandas as pd
+import geopandas as gpd
 import numpy as np
 import os
 import warnings
 from scipy import stats
 import ast
-from census_variables import YEAR_BUILT_VARS, HOUSING_VARS, POPULATION_VARS
+from census_variables import YEAR_BUILT_VARS, HOUSING_VARS, POPULATION_VARS, AUSTIN_COUNTIES
 
 warnings.filterwarnings('ignore')
 
@@ -99,11 +100,14 @@ def load_data():
     income_data = income_data[['tract', 'Estimate!!Households!!Median income (dollars)']]
     
     print(f"  Census tracts with income: {len(income_data)}")
-    
-    return incidents, pop_data, housing_data, age_data, income_data
+
+    shape_data = gpd.read_file("raw_data/tl_2023_48_tract.shp")
+    shape_data = shape_data[['TRACTCE', 'ALAND']]
+
+    return incidents, pop_data, housing_data, age_data, income_data, shape_data
 
 # Make sure this averages out the census demographics in the case of boundaries.
-def prepare_census_demographics(pop_data, housing_data, age_data, income_data):
+def prepare_census_demographics(pop_data, housing_data, age_data, income_data, shape_data):
     """
     Merge census demographic files into a single dataframe by tract code.
     """
@@ -114,12 +118,14 @@ def prepare_census_demographics(pop_data, housing_data, age_data, income_data):
     housing_data = housing_data.rename(columns={'Total': 'total_units', 'tract': 'tract_code'})
     age_data = age_data.rename(columns={'Total': 'total_units_age', 'tract': 'tract_code'})
     income_data = income_data.rename(columns={'Estimate!!Households!!Median income (dollars)': 'median_income', 'tract': 'tract_code'})
+    shape_data = shape_data.rename(columns={'TRACTCE': 'tract_code', 'ALAND': 'land_area_m2'})
     
     # Convert tract codes to strings
     pop_data['tract_code'] = pop_data['tract_code'].astype(str)
     housing_data['tract_code'] = housing_data['tract_code'].astype(str)
     age_data['tract_code'] = age_data['tract_code'].astype(str)
     income_data['tract_code'] = income_data['tract_code'].astype(str)
+    shape_data['tract_code'] = shape_data['tract_code'].astype(str)
 
     # Merge population with housing
     census = pop_data[['tract_code', 'population']].merge(
@@ -164,6 +170,15 @@ def prepare_census_demographics(pop_data, housing_data, age_data, income_data):
         how='left'
     )
     
+    # Merge with shape data for land area and density
+    census = census.merge(
+        shape_data,
+        on='tract_code',
+        how='left'
+    )
+    # Population density, converted to sq miles
+    census['population_density'] = census['population'] / census['land_area_m2'] * 2.59e+6 
+
     print(f"  Census tracts in demographics: {len(census)}")
     
     return census
@@ -367,11 +382,6 @@ def analyze_incident_characteristics(incidents_df):
         include_lowest=True
     )
     
-    # Find relevant columns for incident characteristics
-    # (These depend on what's actually in the raw incident data)
-    
-    print(f"\n  Available columns: {list(incidents_df.columns)[:20]}...")
-    
     # Create summary by housing type for major fields
     housing_summary = []
     
@@ -495,10 +505,10 @@ def main():
     print("#"*60)
     
     # Load data
-    incidents, pop_data, housing_data, age_data, income_data = load_data()
+    incidents, pop_data, housing_data, age_data, income_data, shape_data = load_data()
     
     # Prepare census demographics
-    census = prepare_census_demographics(pop_data, housing_data, age_data, income_data)
+    census = prepare_census_demographics(pop_data, housing_data, age_data, income_data, shape_data)
     census.to_csv("processed_data/census_demographics.csv", index=False)
 
     # Explode incidents by tract and join with demographics
