@@ -1,6 +1,8 @@
 # Data files - too large for GitHub, can be regenerated
 raw_data/
 outputs/
+processed_data\response_areas_final.geojson
+processed_data\response_areas_with_demographics.geojson
 
 # Python
 __pycache__/
