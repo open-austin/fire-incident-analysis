@@ -1,5 +1,7 @@
 # Multifamily Fire Cause Analysis Design
 
+**Status:** ✅ Implemented in `06_nfirs_cause_analysis.py` — cause, heat source, area of origin, and sprinkler analyses complete. Building height analysis added March 2026 (pending NFIRS data for output generation).
+
 ## Problem Statement
 
 Multifamily housing areas have **4.2x higher structure fire rates** than single-family areas:
@@ -142,41 +144,39 @@ Multifamily Post-2010          G                    H
 
 ## Implementation Plan
 
-### Step 1: Extract NFIRS Data
-- Parse `fireincident.txt` and `basicincident.txt` for TX/WP801
-- Join on incident key fields
-- Export to `processed_data/nfirs_austin_detailed.csv`
+All steps implemented in `06_nfirs_cause_analysis.py`:
 
-### Step 2: Code Lookups
-- Map `CAUSE_IGN`, `HEAT_SOURC`, `AREA_ORIG`, `PROP_USE` codes to labels
-- Use `codelookup.txt` for reference
+### Step 1: Extract NFIRS Data ✅
+- Parses `fireincident.txt`, `basicincident.txt`, and `structurefire.txt` for TX/WP801
+- Joins on incident key fields (STATE + FDID + INC_DATE + INC_NO + EXP_NO)
 
-### Step 3: Cause Analysis
-- Aggregate by housing type (PROP_USE)
-- Calculate rates and distributions
-- Generate comparison charts
+### Step 2: Code Lookups ✅
+- Maps `CAUSE_IGN`, `HEAT_SOURC`, `AREA_ORIG`, `PROP_USE` codes to labels
+- Grouped into readable categories
 
-### Step 4: Sprinkler Analysis
-- Cross-tabulate sprinkler presence by building characteristics
-- Calculate effectiveness metrics
-- Generate matrix visualizations
+### Step 3: Cause Analysis ✅
+- Aggregated by housing type (PROP_USE 419 vs 429)
+- Outputs: `cause_by_housing_type.csv`, `heat_source_by_housing.csv`, `area_origin_by_housing.csv`
+- Charts: `chart_cause_comparison.png`, `chart_heat_source_comparison.png`
 
-### Step 5: Integration
-- Add new analysis functions to `04_analysis.py`
-- Add new visualizations to `05_visualize.py`
-- Update outputs
+### Step 4: Sprinkler Analysis ✅
+- Cross-tabulated sprinkler presence by housing type
+- Output: `sprinkler_by_housing.csv`
+- **Finding:** Low reporting quality — no "present" records in Austin NFIRS data
 
-## Expected Findings
+### Step 5: Building Height Analysis ✅ (code complete)
+- Added `structurefire.txt` loading for BLDG_ABOVE field
+- `analyze_building_height()` categorizes by 1-2, 3-4, 5-7, 8+ stories
+- `create_building_height_chart()` generates two-panel visualization
+- Outputs pending NFIRS data download
 
-Based on national fire data patterns, likely findings:
+## Actual Findings
 
-1. **Cause:** Unintentional (cooking, smoking) likely dominates in both housing types, but may be proportionally higher in multifamily due to density
+1. **Cause:** Unintentional causes dominate in both types — 76% in MF vs 64% in SF. Cooking (24%) and smoking (18%) are the top MF heat sources. Arson is actually lower in MF (6%) than SF (10%).
 
-2. **Sprinklers:** Pre-2010 multifamily likely has low sprinkler rates; post-2010 should be much higher
+2. **Sprinklers:** NFIRS sprinkler reporting for Austin is too sparse to draw conclusions — no "present" records. The area-level building age analysis (141% higher rates in older stock) remains the best proxy for sprinkler code effectiveness.
 
-3. **Key insight:** The 4x gap likely narrows significantly when comparing:
-   - Post-2010 sprinklered multifamily vs post-2010 single-family
-   - This would support the building safety hypothesis
+3. **Key insight:** The 4x gap is driven by behavioral factors (cooking, smoking) amplified by density, not by building deficiency or arson. This supports prevention-focused interventions over infrastructure-only responses.
 
 ## Out of Scope
 

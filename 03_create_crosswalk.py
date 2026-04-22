@@ -5,6 +5,9 @@ Step 3: Create Spatial Crosswalk
 Creates a crosswalk between census tracts and AFD response areas,
 then allocates census demographics to response areas.
 
+Also integrates zoning data to estimate building height limits per
+response area based on Austin zoning district codes.
+
 Usage:
     python scripts/03_create_crosswalk.py
 
@@ -14,6 +17,7 @@ Input:
     raw_data/census_population.csv
     raw_data/census_housing.csv
     raw_data/census_year_built.csv
+    raw_data/zoning.geojson (optional)
     raw_data/census_income.csv
 
 Output:
@@ -118,6 +122,147 @@ def load_census_data():
         print("  Warning: Income data not found")
 
     return pop, housing, year_built, income
+
+
+# Austin zoning code -> max height in feet and estimated max stories
+ZONING_HEIGHT_MAP = {
+    # Single-family residential (35 ft)
+    'SF-1': (35, 2), 'SF2': (35, 2), 'SF-2': (35, 2), 'SF-3': (35, 2),
+    'SF-4A': (35, 2), 'SF-4B': (35, 2), 'SF-5': (35, 3), 'SF-6': (35, 3),
+    'RR': (35, 2), 'LA': (35, 2), 'L': (35, 2),
+    # Multifamily residential
+    'MF-1': (35, 3), 'MF-2': (35, 3), 'MF-3': (40, 4), 'MF-4': (50, 5),
+    'MF-5': (60, 6), 'MF-6': (60, 6),
+    # Commercial / office
+    'NO': (40, 3), 'LO': (40, 3), 'GO': (60, 5), 'LR': (40, 3),
+    'GR': (60, 5), 'CR': (60, 5), 'CS': (60, 5), 'CS-1': (40, 3),
+    'CH': (60, 5),
+    # Downtown / dense urban
+    'CBD': (None, 40), 'DMU': (120, 12),
+    # Industrial
+    'IP': (60, 4), 'LI': (60, 4), 'MI': (60, 4),
+    # Special purpose
+    'PUD': (60, 5), 'TOD': (60, 5), 'TND': (50, 4), 'NBG': (40, 3),
+    'ERC': (35, 2), 'MH': (35, 2),
+    # Agricultural / rural
+    'AG': (35, 2), 'DR': (35, 2), 'AV': (35, 2),
+    # Other
+    'P': (60, 5), 'UNZ': (35, 2), 'W/LO': (40, 3),
+}
+
+
+def load_zoning():
+    """Load Austin zoning district boundaries and map to height estimates"""
+    zoning_path = "raw_data/zoning.geojson"
+    if not os.path.exists(zoning_path):
+        print("\n  Zoning data not found (raw_data/zoning.geojson) - skipping height analysis")
+        return None
+
+    print("\nLoading zoning data...")
+    zoning = gpd.read_file(zoning_path)
+    print(f"  Loaded {len(zoning)} zoning polygons")
+
+    # Identify the base zone column
+    zone_col = None
+    for col in ['BASE_ZONE', 'base_zone', 'ZONING_ZTYPE', 'zoning_ztype']:
+        if col in zoning.columns:
+            zone_col = col
+            break
+
+    if zone_col is None:
+        print("  Warning: Could not find zoning code column")
+        return None
+
+    print(f"  Using zone column: {zone_col}")
+    print(f"  Unique base zones: {zoning[zone_col].nunique()}")
+
+    # Map zoning codes to height estimates
+    zoning['max_height_ft'] = zoning[zone_col].map(
+        lambda z: ZONING_HEIGHT_MAP.get(z, (35, 2))[0]
+    )
+    zoning['max_stories'] = zoning[zone_col].map(
+        lambda z: ZONING_HEIGHT_MAP.get(z, (35, 2))[1]
+    )
+    zoning['base_zone'] = zoning[zone_col]
+
+    # Detect mixed-use/vertical overlays from full zoning type
+    ztype_col = None
+    for col in ['ZONING_ZTYPE', 'zoning_ztype']:
+        if col in zoning.columns:
+            ztype_col = col
+            break
+
+    if ztype_col:
+        zoning['is_vertical_mu'] = zoning[ztype_col].str.contains('-V', na=False)
+        zoning['is_mixed_use'] = zoning[ztype_col].str.contains('-MU', na=False)
+        # Vertical mixed-use typically allows taller buildings
+        zoning.loc[zoning['is_vertical_mu'], 'max_stories'] = zoning.loc[
+            zoning['is_vertical_mu'], 'max_stories'
+        ].clip(lower=6)
+
+    print(f"  Height estimates mapped for {zoning['max_stories'].notna().sum()} polygons")
+
+    return zoning
+
+
+def allocate_zoning_to_response_areas(zoning_gdf, response_areas_gdf, ra_id_col):
+    """
+    Area-weighted allocation of zoning characteristics to response areas.
+    Calculates the distribution of zoning types and weighted average max height.
+    """
+    print("\nAllocating zoning data to response areas...")
+
+    target_crs = "EPSG:32614"
+    zoning = zoning_gdf.to_crs(target_crs)
+    ra = response_areas_gdf.to_crs(target_crs)
+
+    # Intersect zoning with response areas
+    print("  Computing zoning/response area intersection...")
+    intersected = gpd.overlay(
+        zoning[['geometry', 'base_zone', 'max_height_ft', 'max_stories']],
+        ra[['geometry', ra_id_col]],
+        how='intersection'
+    )
+    intersected['area'] = intersected.geometry.area
+
+    print(f"  Created {len(intersected)} intersection polygons")
+
+    # Aggregate by response area: area-weighted average max stories
+    intersected['weighted_stories'] = intersected['max_stories'] * intersected['area']
+    intersected['weighted_height'] = intersected['max_height_ft'].fillna(0) * intersected['area']
+
+    ra_zoning = intersected.groupby(ra_id_col).agg(
+        total_zoned_area=('area', 'sum'),
+        weighted_stories_sum=('weighted_stories', 'sum'),
+        weighted_height_sum=('weighted_height', 'sum'),
+    ).reset_index()
+
+    ra_zoning['avg_max_stories'] = ra_zoning['weighted_stories_sum'] / ra_zoning['total_zoned_area']
+    ra_zoning['avg_max_height_ft'] = ra_zoning['weighted_height_sum'] / ra_zoning['total_zoned_area']
+
+    # Also compute dominant zoning category per response area
+    zone_areas = intersected.groupby([ra_id_col, 'base_zone'])['area'].sum().reset_index()
+    dominant = zone_areas.loc[zone_areas.groupby(ra_id_col)['area'].idxmax()]
+    dominant = dominant[[ra_id_col, 'base_zone']].rename(columns={'base_zone': 'dominant_zone'})
+
+    ra_zoning = ra_zoning.merge(dominant, on=ra_id_col, how='left')
+
+    # Compute % of area in tall-building zones (max_stories >= 4)
+    tall_zones = intersected[intersected['max_stories'] >= 4].groupby(ra_id_col)['area'].sum().reset_index()
+    tall_zones.columns = [ra_id_col, 'tall_zone_area']
+    ra_zoning = ra_zoning.merge(tall_zones, on=ra_id_col, how='left')
+    ra_zoning['tall_zone_area'] = ra_zoning['tall_zone_area'].fillna(0)
+    ra_zoning['pct_tall_zoning'] = (ra_zoning['tall_zone_area'] / ra_zoning['total_zoned_area'] * 100).fillna(0)
+
+    ra_zoning = ra_zoning.rename(columns={ra_id_col: 'response_area_id'})
+    result = ra_zoning[['response_area_id', 'avg_max_stories', 'avg_max_height_ft',
+                         'dominant_zone', 'pct_tall_zoning']].copy()
+
+    print(f"  Zoning allocated to {len(result)} response areas")
+    print(f"  Avg max stories range: {result['avg_max_stories'].min():.1f} - {result['avg_max_stories'].max():.1f}")
+    print(f"  Top dominant zones: {result['dominant_zone'].value_counts().head(5).to_string()}")
+
+    return result
 
 
 def process_census_data(pop_df, housing_df, year_built_df=None, income_df=None):
@@ -406,6 +551,88 @@ def allocate_demographics(crosswalk, census_df, response_areas_gdf, ra_id_col):
     return ra_demographics, ra
 
 
+def estimate_height_from_census(ra_demographics):
+    """
+    For response areas without zoning data (ETJ areas), estimate building
+    height from census housing mix (B25024). Also categorizes all areas
+    into height and density bands with a data source flag.
+
+    Adds columns:
+        height_data_source  - 'zoning', 'census_estimate', or 'none'
+        census_est_stories  - census-inferred avg stories (always computed)
+        height_category     - 'low_rise' (≤2.5), 'mid_rise' (2.5-5), 'high_rise' (>5)
+        density_category    - 'low_density', 'medium_density', 'high_density'
+    """
+    # Assumed typical story counts by census housing type
+    HOUSING_STORIES = {
+        'single_family': 1.5,
+        'duplex': 2.0,
+        'small_multifamily': 3.0,   # 3-19 unit buildings
+        'large_multifamily': 6.0,   # 20+ unit buildings
+        'mobile_other': 1.0,
+    }
+
+    df = ra_demographics.copy()
+
+    # --- Census-based estimate (computed for ALL areas, used as fallback) ---
+    total = df['total_units'].replace(0, float('nan'))
+    df['census_est_stories'] = (
+        df['single_family'].fillna(0) * HOUSING_STORIES['single_family'] +
+        df['duplex'].fillna(0) * HOUSING_STORIES['duplex'] +
+        df['small_multifamily'].fillna(0) * HOUSING_STORIES['small_multifamily'] +
+        df['large_multifamily'].fillna(0) * HOUSING_STORIES['large_multifamily'] +
+        df['mobile_other'].fillna(0) * HOUSING_STORIES['mobile_other']
+    ) / total
+
+    # --- Data source flag ---
+    has_zoning = df['avg_max_stories'].notna() if 'avg_max_stories' in df.columns else pd.Series(False, index=df.index)
+    has_census = df['census_est_stories'].notna()
+
+    df['height_data_source'] = 'none'
+    df.loc[has_census, 'height_data_source'] = 'census_estimate'
+    df.loc[has_zoning, 'height_data_source'] = 'zoning'
+
+    # --- Fill missing zoning values with census estimate ---
+    if 'avg_max_stories' not in df.columns:
+        df['avg_max_stories'] = float('nan')
+    missing = df['avg_max_stories'].isna()
+    df.loc[missing, 'avg_max_stories'] = df.loc[missing, 'census_est_stories']
+
+    # --- Height category ---
+    def _height_cat(stories):
+        if pd.isna(stories):
+            return 'unknown'
+        elif stories <= 2.5:
+            return 'low_rise'
+        elif stories <= 5.0:
+            return 'mid_rise'
+        else:
+            return 'high_rise'
+
+    df['height_category'] = df['avg_max_stories'].apply(_height_cat)
+
+    # --- Density category (housing units per sq mile proxy via total_units / population) ---
+    # Use multifamily percentage as density proxy since we don't have area here
+    pct_mf = df.get('pct_multifamily', pd.Series(0, index=df.index))
+    df['density_category'] = pd.cut(
+        pct_mf,
+        bins=[-1, 20, 50, 100],
+        labels=['low_density', 'medium_density', 'high_density']
+    ).astype(str).replace('nan', 'unknown')
+
+    # --- Summary ---
+    print("\nHeight estimation summary:")
+    print(f"  Zoning-based:    {(df['height_data_source'] == 'zoning').sum()} areas")
+    print(f"  Census-estimated: {(df['height_data_source'] == 'census_estimate').sum()} areas")
+    print(f"  No data:          {(df['height_data_source'] == 'none').sum()} areas")
+    print(f"\n  Height categories:")
+    print(f"    {df['height_category'].value_counts().to_string()}")
+    print(f"\n  Density categories:")
+    print(f"    {df['density_category'].value_counts().to_string()}")
+
+    return df
+
+
 def main():
     print("\n" + "#"*60)
     print("# FIRE RESOURCE ANALYSIS - CREATE SPATIAL CROSSWALK")
@@ -415,18 +642,35 @@ def main():
     response_areas = load_response_areas()
     tracts = load_census_tracts()
     pop_df, housing_df, year_built_df, income_df = load_census_data()
+    zoning = load_zoning()
 
     # Process census data
     census = process_census_data(pop_df, housing_df, year_built_df, income_df)
-    
+
     # Create crosswalk
     crosswalk, ra_id_col = create_crosswalk(tracts, response_areas)
-    
+
     # Allocate demographics
     ra_demographics, ra_with_demographics = allocate_demographics(
         crosswalk, census, response_areas, ra_id_col
     )
-    
+
+    # Allocate zoning data to response areas
+    if zoning is not None:
+        zoning_by_ra = allocate_zoning_to_response_areas(zoning, response_areas, ra_id_col)
+        ra_demographics = ra_demographics.merge(zoning_by_ra, on='response_area_id', how='left')
+        ra_with_demographics = ra_with_demographics.merge(zoning_by_ra, on='response_area_id', how='left')
+        print(f"\n  Zoning data merged into demographics")
+
+    # Estimate height from census for areas without zoning (ETJ) + categorize all areas
+    ra_demographics = estimate_height_from_census(ra_demographics)
+    # Sync new columns back to the geo dataframe
+    new_cols = ['census_est_stories', 'height_data_source', 'height_category', 'density_category']
+    for col in new_cols:
+        if col in ra_demographics.columns:
+            mapping = ra_demographics.set_index('response_area_id')[col]
+            ra_with_demographics[col] = ra_with_demographics['response_area_id'].map(mapping)
+
     # Save outputs
     os.makedirs("processed_data", exist_ok=True)
     

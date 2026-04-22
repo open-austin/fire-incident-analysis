@@ -1,9 +1,9 @@
 # Austin Fire Department Resource Analysis
 ## Fire Incident Patterns by Housing Type, Urban Classification, and Building Age
 
-**Analysis Period:** 2022-2024
-**Data Source:** Austin Open Data Portal, US Census ACS 2022
-**Prepared:** December 2024
+**Analysis Period:** 2022-2024 (AFD incidents), 2018-2021 (NFIRS cause data)
+**Data Source:** Austin Open Data Portal, US Census ACS 2022, NFIRS Public Data Release
+**Prepared:** December 2024, updated March 2026
 
 ---
 
@@ -16,14 +16,18 @@ This analysis examines fire incident patterns across Austin Fire Department's se
 
 ### Key Findings
 
-1. **Multifamily areas have 4-6x higher fire rates** than single-family dominant areas across all incident types
-2. **The 2006 Austin sprinkler code is working** - structure fires are 141% higher in older buildings vs. newer construction
-3. **Trash/dumpster fires dominate** in high-density areas (30.6 per 1,000 units in multifamily vs. 4.6 in single-family)
-4. **Outer suburban areas have consistently lowest fire rates** (~1 structure fire per 1,000 units annually)
+1. **Multifamily areas have 4-6x higher fire rates** than single-family dominant areas across all incident types ([data](summary_by_housing_type.csv) · [chart](chart_incident_type_by_housing.png) · [script](../04_analysis.py))
+2. **The 2006 Austin sprinkler code is working** - structure fires are 141% higher in older buildings vs. newer construction ([data](summary_by_building_age.csv) · [chart](chart_incident_types_by_age.png) · [script](../04_analysis.py))
+3. **Trash/dumpster fires dominate** in high-density areas (30.6 per 1,000 units in multifamily vs. 4.6 in single-family) ([data](incident_rates_by_housing_and_type.csv))
+4. **Outer suburban areas have consistently lowest fire rates** (~1 structure fire per 1,000 units annually) ([data](summary_by_urban_class.csv) · [chart](chart_urban_comparison.png))
+5. **Cooking and smoking — not arson — drive the multifamily gap** (NFIRS: 76% unintentional in MF vs 64% in SF) ([cause data](cause_by_housing_type.csv) · [chart](chart_cause_comparison.png) · [script](../06_nfirs_cause_analysis.py))
+6. **Kitchen fires account for 32% of multifamily fire origins** vs 20% in single-family ([data](area_origin_by_housing.csv))
 
 ---
 
 ## 1. Fire Incidents by Housing Type
+
+> Source: [summary_by_housing_type.csv](summary_by_housing_type.csv) · [incident_rates_by_housing_and_type.csv](incident_rates_by_housing_and_type.csv) · [chart](chart_incident_type_by_housing.png) · [analysis script](../04_analysis.py)
 
 Fire rates vary dramatically based on the housing composition of an area:
 
@@ -46,6 +50,8 @@ Fire rates vary dramatically based on the housing composition of an area:
 
 ## 2. Structure Fire Trends by Urban Classification
 
+> Source: [summary_by_urban_class.csv](summary_by_urban_class.csv) · [structure_fires_by_urban_trend.csv](structure_fires_by_urban_trend.csv) · [chart](chart_structure_fires_by_urban.png) · [map](map_urban_classification.html) · [analysis script](../04_analysis.py)
+
 Focusing on structure fires only (excluding vehicle, trash, and outdoor fires):
 
 | Urban Classification | 2022 | 2023 | 2024 | 3-Year Avg |
@@ -64,6 +70,8 @@ Focusing on structure fires only (excluding vehicle, trash, and outdoor fires):
 ---
 
 ## 3. Building Age Effect (Sprinkler Code Impact)
+
+> Source: [summary_by_building_age.csv](summary_by_building_age.csv) · [incident_types_by_building_age.csv](incident_types_by_building_age.csv) · [chart](chart_incident_types_by_age.png) · [map](map_building_age.html) · [analysis script](../04_analysis.py)
 
 Austin adopted residential sprinkler requirements in 2006, affecting construction from ~2010 onward. The data shows a clear impact:
 
@@ -85,6 +93,8 @@ Austin adopted residential sprinkler requirements in 2006, affecting constructio
 
 ## 4. Structure Fire Trends by Housing Type
 
+> Source: [structure_fires_by_housing_trend.csv](structure_fires_by_housing_trend.csv) · [chart](chart_structure_fires_by_housing.png) · [analysis script](../04_analysis.py)
+
 | Housing Type | 2022 | 2023 | 2024 |
 |--------------|------|------|------|
 | Multifamily (<25% SF) | 2.95 | 2.94 | 2.91 |
@@ -103,6 +113,8 @@ Austin adopted residential sprinkler requirements in 2006, affecting constructio
 
 ## 5. Fire Station Coverage
 
+> Source: [station_coverage.csv](station_coverage.csv) · [map](map_fire_stations.html) · [analysis script](../04_analysis.py)
+
 | Urban Classification | Stations | Population | Pop/Station | Sq Mi/Station |
 |---------------------|----------|------------|-------------|---------------|
 | Urban Core | 2 | 38,258 | 19,129 | 1.3 |
@@ -114,6 +126,8 @@ Austin adopted residential sprinkler requirements in 2006, affecting constructio
 ---
 
 ## 6. Statistical Summary
+
+> Source: [summary_by_incident_type.csv](summary_by_incident_type.csv) · [statistical_tests.txt](statistical_tests.txt) · [table](table_summary.png) · [analysis script](../04_analysis.py)
 
 ### Total Incidents by Category (2022-2024)
 
@@ -136,12 +150,65 @@ Austin adopted residential sprinkler requirements in 2006, affecting constructio
 
 ---
 
+## 7. NFIRS Cause Analysis (2018-2021)
+
+> Source: [NFIRS analysis script](../06_nfirs_cause_analysis.py) · [cause data](cause_by_housing_type.csv) · [heat source data](heat_source_by_housing.csv) · [area of origin data](area_origin_by_housing.csv) · [sprinkler data](sprinkler_by_housing.csv) · [cause chart](chart_cause_comparison.png) · [heat source chart](chart_heat_source_comparison.png)
+
+Using national NFIRS data for Austin (TX FDID WP801), we analyzed the *causes* behind the multifamily fire rate gap.
+
+### Cause of Ignition
+
+| Cause | Multifamily | Single-Family |
+|-------|------------|---------------|
+| **Unintentional** | **76.2%** | **64.3%** |
+| Equipment failure | 10.6% | 16.3% |
+| Intentional (arson) | 6.0% | 9.7% |
+| Undetermined | 5.0% | 4.3% |
+| Under investigation | 1.4% | 2.3% |
+| Act of nature | 0.7% | 2.3% |
+
+**Key finding:** Unintentional causes dominate in both housing types, but are proportionally higher in multifamily (76% vs 64%). Intentional fires (arson) are actually *lower* in multifamily — arson is not driving the rate gap.
+
+### Heat Source
+
+| Heat Source | Multifamily | Single-Family |
+|-------------|------------|---------------|
+| **Cooking** | **24.1%** | **23.0%** |
+| Electrical | 19.1% | 17.7% |
+| **Smoking** | **18.1%** | **4.7%** |
+| Heating | 16.0% | 20.0% |
+| Open flame | 3.5% | 6.0% |
+
+**Key finding:** Smoking is 4x more common as a heat source in multifamily fires (18% vs 5%). Cooking is the top heat source in both types. Heating-related fires are more common in single-family.
+
+### Area of Origin
+
+| Area | Multifamily | Single-Family |
+|------|------------|---------------|
+| **Kitchen** | **31.6%** | **19.7%** |
+| Exterior | 21.3% | 25.3% |
+| Bathroom/Laundry | 6.0% | 4.7% |
+| Living areas | 3.2% | 7.0% |
+
+**Key finding:** Kitchen fires account for nearly a third of multifamily fire origins, consistent with the cooking + density hypothesis.
+
+### Policy Implications
+
+These cause data suggest that the higher fire rates in multifamily areas are driven by **behavioral factors** (cooking, smoking) amplified by density, not by building deficiency or arson ([cause data](cause_by_housing_type.csv) · [heat source data](heat_source_by_housing.csv)). This has implications for:
+- **Single-stair buildings:** New construction with enhanced sprinklers should mitigate risk ([building age data](summary_by_building_age.csv)); the causes (cooking, smoking) are independent of stairwell count
+- **Prevention:** Cooking safety programs and smoking policies in multifamily buildings may be more cost-effective than infrastructure investments
+- **HOME initiative:** As SF lots are redeveloped with denser housing, fire prevention education should scale accordingly ([housing type rates](summary_by_housing_type.csv))
+
+---
+
 ## Methodology
 
 ### Data Sources
 - **Fire Incidents:** Austin Open Data Portal (AFD Fire Incidents 2022-2024)
+- **NFIRS Cause Data:** USFA NFIRS Public Data Release (2018-2021, TX FDID WP801)
 - **Demographics:** US Census American Community Survey 2022 5-Year Estimates
 - **Geographic Boundaries:** City of Austin ArcGIS (AFD Response Areas)
+- **Zoning:** City of Austin ArcGIS (Current Zoning Districts)
 
 ### Definitions
 - **Urban Core:** Population density >10,000 per square mile
@@ -152,8 +219,11 @@ Austin adopted residential sprinkler requirements in 2006, affecting constructio
 
 ### Limitations
 - Census demographics from 2022 applied to all years (assumes stable population)
-- Historical data (2018-2021) not available from Austin Open Data Portal
+- Historical AFD data (2018-2021) not available from Austin Open Data Portal
 - Building age based on area-level percentages, not individual structure data
+- NFIRS cause data (2018-2021) is from a different time period than AFD incident data (2022-2024)
+- NFIRS sprinkler presence field has low reporting quality (no "present" records in Austin data)
+- Income (B19013) not yet integrated as a confounding variable
 
 ---
 
@@ -162,17 +232,30 @@ Austin adopted residential sprinkler requirements in 2006, affecting constructio
 ### Data Files
 - `summary_by_urban_class.csv` - Aggregate statistics by urban classification
 - `summary_by_housing_type.csv` - Aggregate statistics by housing typology
+- `summary_by_building_age.csv` - Aggregate statistics by building age
+- `summary_by_incident_type.csv` - Incident counts by category
 - `structure_fires_by_housing_trend.csv` - Year-over-year structure fire trends
 - `incident_types_by_building_age.csv` - Incident rates by building age
 - `incident_rates_by_housing_and_type.csv` - Full cross-tabulation
+- `station_coverage.csv` - Fire station coverage by urban class
+- `cause_by_housing_type.csv` - NFIRS cause of ignition by housing type
+- `heat_source_by_housing.csv` - NFIRS heat source by housing type
+- `area_origin_by_housing.csv` - NFIRS area of origin by housing type
+- `sprinkler_by_housing.csv` - NFIRS sprinkler presence by housing type
 
 ### Visualizations
 - `chart_incident_type_by_housing.png` - Incident types by housing classification
 - `chart_incident_types_by_age.png` - Incident types by building age
 - `chart_structure_fires_by_housing.png` - Structure fire trends by housing type
 - `chart_structure_fires_by_urban.png` - Structure fire trends by urban class
+- `chart_cause_comparison.png` - NFIRS cause comparison (MF vs SF)
+- `chart_heat_source_comparison.png` - NFIRS heat source comparison
+- `chart_housing_correlation.png` - Housing type correlation scatter
 - `map_incidents_per_capita.html` - Interactive map of incident rates
 - `map_building_age.html` - Interactive map of building age distribution
+- `map_fire_stations.html` - Fire station locations
+- `map_housing_typology.html` - Housing type distribution
+- `map_urban_classification.html` - Urban/suburban classification
 
 ---
 
@@ -221,8 +304,8 @@ Austin's 2006 effective date predates this state preemption, potentially preserv
 
 ### Evidence of Code Effectiveness
 
-As shown in Section 3 of this report, areas with newer construction (50%+ built post-2010) show:
-- **141% lower structure fire rates** compared to older building stock
+As shown in [Section 3](#3-building-age-effect-sprinkler-code-impact) of this report, areas with newer construction (50%+ built post-2010) show:
+- **141% lower structure fire rates** compared to older building stock ([data](summary_by_building_age.csv) · [chart](chart_incident_types_by_age.png))
 - Minimal difference in vehicle and outdoor fires (not affected by building codes)
 
 This supports the conclusion that the 2006 sprinkler code requirements have meaningfully reduced fire risk in Austin's newer buildings.
