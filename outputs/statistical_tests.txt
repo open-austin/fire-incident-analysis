@@ -1,23 +1,23 @@
 T-test: Inner Suburban vs Urban Core
   Urban mean: 18.78 incidents per 1,000 pop
-  Suburban mean: 21.92 incidents per 1,000 pop
-  t-statistic: 0.566
-  p-value: 0.6030
-  Significant at α=0.05: No
+  Suburban mean: 20.36 incidents per 1,000 pop
+  t-statistic: 0.289
+  p-value: 0.7884
+  Significant at alpha=0.05: No
 
 T-test: Outer Suburban vs Urban Core
   Urban mean: 18.78
-  Outer Suburban mean: 10.84
-  t-statistic: -1.440
-  p-value: 0.2293
-  Significant at α=0.05: No
+  Outer Suburban mean: 9.06
+  t-statistic: -1.797
+  p-value: 0.1591
+  Significant at alpha=0.05: No
 
 ANOVA: All Urban Classifications
-  F-statistic: 7.011
-  p-value: 0.0010
-  Significant at α=0.05: Yes
+  F-statistic: 12.119
+  p-value: 0.0000
+  Significant at alpha=0.05: Yes
 
 Correlation: % Single-Family vs Incident Rate
-  Pearson r: -0.306
+  Pearson r: -0.303
   p-value: 0.0000
   Interpretation: Negative correlation

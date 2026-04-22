@@ -56,7 +56,7 @@ def download_file(url, filename, description):
 
 from census_variables import ALL_CENSUS_VARS, AUSTIN_COUNTIES
 
-def download_census_api(table, variables, filename, description):
+def download_census_api(table, variables, filename, description, group=False):
     if os.path.isfile(filename):
         print("File already exists, skipping download.")
         return True
@@ -68,11 +68,12 @@ def download_census_api(table, variables, filename, description):
     print('='*60)
     
     base_url = "https://api.census.gov/data/2022/acs/acs5"
+    if group:
+        base_url += "/subject"
     var_string = ",".join(variables)
     county_string = ",".join(AUSTIN_COUNTIES.values())
 
     url = f"{base_url}?get={var_string}&for=tract:*&in=state:48&in=county:{county_string}"
-    
     try:
         response = requests.get(url, timeout=60)
         response.raise_for_status()
@@ -112,29 +113,22 @@ def main():
         "AFD Fire Incidents 2022-2024"
     )
     
-    # 2. Fire Incidents 2018-2021
-    results['incidents_historical'] = download_file(
-        "https://data.austintexas.gov/api/views/j9w8-x2vu/rows.csv?accessType=DOWNLOAD",
-        "raw_data/afd_incidents_2018_2021.csv",
-        "AFD Fire Incidents 2018-2021"
-    )
-    
-    # 3. AFD Response Areas
+    # 2. AFD Response Areas
     results['response_areas'] = download_file(
         "https://services.arcgis.com/0L95CJ0VTaxqcmED/arcgis/rest/services/BOUNDARIES_afd_response_areas/FeatureServer/0/query?where=1=1&outFields=*&outSR=4326&f=geojson",
         "raw_data/afd_response_areas.geojson",
         "AFD Response Area Boundaries"
     )
     
-    # 4. Census Population
+    # 3. Census Population
     results['census_population'] = download_census_api(
         "B01003",
         ["B01003_001E", "NAME"],
         "raw_data/census_population.csv",
-        "Census Population by Tract (Travis County)"
+        "Census Population by Tract"
     )
     
-    # 5. Census Housing Units by Type
+    # 4. Census Housing Units by Type
     housing_vars = ["B25024_001E"]  # Total
     housing_vars += [f"B25024_{str(i).zfill(3)}E" for i in range(2, 12)]  # Breakdown
     housing_vars += ["NAME"]
@@ -143,7 +137,16 @@ def main():
         "B25024",
         housing_vars,
         "raw_data/census_housing.csv",
-        "Census Housing Units by Type (Travis County)"
+        "Census Housing Units by Type"
+    )    
+
+    # 5. Census Income
+    results['census_income'] = download_census_api(
+        "S1901",
+        ["group(S1901)"],
+        "raw_data/census_income.csv",
+        "Median Income by Tract",
+        group=True
     )
 
     # 6. Census Year Structure Built (B25034)
