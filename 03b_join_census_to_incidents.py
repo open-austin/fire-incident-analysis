@@ -21,10 +21,10 @@ import geopandas as gpd
 def join_census_to_incidents(incident_data_path, tract_shapefile_path, output_path):
     # Load incident data
     incidents = pd.read_csv(incident_data_path)
-    incidents = incidents[incidents['incident_category'] == 'Structure Fire'] # Only interested in structure fires for this analysis
+    incidents = incidents[incidents['is_structure_fire'] == True]  # All structure fires (confined + non-confined)
     
     # Removing unneeded columns
-    incidents.drop(columns=['call_type','prioritydescription','jurisdiction','is_structure_fire','is_vehicle_fire','is_outdoor_fire','is_trash_fire','incident_category'], inplace = True)
+    incidents.drop(columns=['call_type','prioritydescription','jurisdiction','is_structure_fire','is_nonconfined_structure_fire','is_confined_structure_fire','is_vehicle_fire','is_outdoor_fire','is_trash_fire','incident_category'], inplace=True, errors='ignore')
     
     # Cleaning out missing lat/long values
     incidents_clean = incidents.dropna(subset=['latitude', 'longitude']).reset_index(drop=True)

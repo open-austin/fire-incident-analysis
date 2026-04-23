@@ -72,6 +72,18 @@ def parse_location(df):
 def classify_incident_type(df):
     """
     Create incident type categories for analysis.
+
+    Classification aligns with NFPA methodology:
+      - Non-confined structure fires: BOX alarm dispatches (full structure
+        fire response — NFIRS code 111)
+      - Confined structure fires: ELEC (electrical) and BBQ (cooking) dispatches
+        where fire stayed at origin (NFIRS codes 113-118)
+      - Both count as structure fires per NFPA/NFIRS/ISO standards
+
+    AFD dispatch codes determine response level, not incident type.  NFPA
+    reports cooking as the #1 cause of home structure fires (~49%) and
+    electrical as #2-3.  Excluding them would undercount structure fires
+    relative to national benchmarks.
     """
     # Column might be 'problem' or 'Problem' or 'call_type'
     problem_col = None
@@ -79,34 +91,50 @@ def classify_incident_type(df):
         if col in df.columns:
             problem_col = col
             break
-    
+
     if problem_col is None:
         print("  Warning: No problem/call_type column found")
         return df
-    
-    # Standardize to lowercase for matching
-    problem_lower = df[problem_col].str.upper().fillna('')
-    
-    # Structure fire indicators
-    structure_keywords = [
-        'STRUCTURE', 'BOX', 'APARTMENT', 'HOUSE', 'RESIDENTIAL', 
+
+    # Standardize to uppercase for matching
+    problem_upper = df[problem_col].str.upper().fillna('')
+
+    # Non-confined structure fires: BOX alarm dispatches (full response)
+    nonconfined_keywords = [
+        'STRUCTURE', 'BOX', 'APARTMENT', 'HOUSE', 'RESIDENTIAL',
         'COMMERCIAL', 'BUILDING', 'HIGHRISE', 'HIGH RISE'
     ]
-    df['is_structure_fire'] = problem_lower.str.contains('|'.join(structure_keywords), regex=True)
-    
+    df['is_nonconfined_structure_fire'] = problem_upper.str.contains(
+        '|'.join(nonconfined_keywords), regex=True
+    )
+
+    # Confined structure fires: electrical and cooking fires at structures
+    # These are structure fires per NFPA/NFIRS but dispatched at a lower
+    # response level because they typically stay confined to origin
+    df['is_confined_structure_fire'] = problem_upper.str.contains(
+        'ELEC|BBQ|COOKING', regex=True
+    )
+
+    # Combined: all structure fires (NFPA-aligned)
+    df['is_structure_fire'] = (
+        df['is_nonconfined_structure_fire'] | df['is_confined_structure_fire']
+    )
+
     # Vehicle fire
-    df['is_vehicle_fire'] = problem_lower.str.contains('VEHICLE|AUTO|CAR|TRUCK', regex=True)
-    
+    df['is_vehicle_fire'] = problem_upper.str.contains('VEHICLE|AUTO|CAR|TRUCK|PKG', regex=True)
+
     # Outdoor/vegetation fire
-    df['is_outdoor_fire'] = problem_lower.str.contains('GRASS|BRUSH|WILDLAND|OUTSIDE', regex=True)
-    
+    df['is_outdoor_fire'] = problem_upper.str.contains('GRASS|BRUSH|WILDLAND|OUTSIDE', regex=True)
+
     # Trash/dumpster fire
-    df['is_trash_fire'] = problem_lower.str.contains('TRASH|DUMP|RUBBISH', regex=True)
-    
-    # Create summary category
+    df['is_trash_fire'] = problem_upper.str.contains('TRASH|DUMP|RUBBISH', regex=True)
+
+    # Create summary category (priority order)
     def categorize(row):
-        if row['is_structure_fire']:
-            return 'Structure Fire'
+        if row['is_nonconfined_structure_fire']:
+            return 'Structure Fire (non-confined)'
+        elif row['is_confined_structure_fire']:
+            return 'Structure Fire (confined)'
         elif row['is_vehicle_fire']:
             return 'Vehicle Fire'
         elif row['is_outdoor_fire']:
@@ -115,9 +143,9 @@ def classify_incident_type(df):
             return 'Trash/Dumpster Fire'
         else:
             return 'Other'
-    
+
     df['incident_category'] = df.apply(categorize, axis=1)
-    
+
     return df
 
 

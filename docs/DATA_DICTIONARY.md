@@ -59,11 +59,13 @@ These are the main datasets our pipeline produces. Each one builds on the previo
 | `location` | The original location coordinates as reported |
 | `longitude` | The east-west coordinate of the incident (negative numbers = west of Greenwich) |
 | `latitude` | The north-south coordinate of the incident |
-| `is_structure_fire` | True/False — Was this a fire in a building? |
+| `is_structure_fire` | True/False — Was this a fire in a building? Includes both non-confined (BOX alarm) and confined (electrical, cooking) structure fires, aligned with NFPA/NFIRS reporting standards |
+| `is_nonconfined_structure_fire` | True/False — Was this a non-confined structure fire? These are BOX alarm dispatches where fire spread beyond its origin point (NFIRS code 111) |
+| `is_confined_structure_fire` | True/False — Was this a confined structure fire? These are electrical (ELEC) and cooking (BBQ) fires that typically stayed at their point of origin (NFIRS codes 113-118) |
 | `is_vehicle_fire` | True/False — Was this a vehicle fire? |
 | `is_outdoor_fire` | True/False — Was this a grass, brush, or outdoor fire? |
 | `is_trash_fire` | True/False — Was this a trash or dumpster fire? |
-| `incident_category` | A plain-language grouping: "Structure Fire", "Vehicle Fire", "Outdoor/Vegetation Fire", "Trash/Dumpster Fire", or "Other" |
+| `incident_category` | A plain-language grouping: "Structure Fire (non-confined)", "Structure Fire (confined)", "Vehicle Fire", "Outdoor/Vegetation Fire", "Trash/Dumpster Fire", or "Other" |
 
 ---
 
@@ -319,7 +321,7 @@ These files contain the results of our analysis — rates, comparisons, and stat
 | `structure_rate_per_1k` | Structure fires per 1,000 properties of this type |
 | `trash_rate_per_1k` | Trash fires per 1,000 properties of this type |
 
-**Key finding:** Large multifamily complexes have 672 structure fires per 1,000 parcels vs. 4.7 for single-family homes. This is because each large complex contains hundreds of units, so more people and more potential fire sources per parcel.
+**Key finding:** Large multifamily complexes have 1,351 structure fires per 1,000 parcels vs. 8.0 for single-family homes. This is because each large complex contains hundreds of units, so more people and more potential fire sources per parcel. Structure fire counts include both non-confined (BOX alarm) and confined (electrical, cooking) fires per NFPA standards.
 
 ---
 
@@ -328,6 +330,42 @@ These files contain the results of our analysis — rates, comparisons, and stat
 **What is it?** Fire rates grouped by when buildings were constructed, using parcel-level data.
 
 **Created by:** `08_parcel_analysis.py`
+
+---
+
+## Townhome Analysis Outputs
+
+---
+
+### townhome_incidents.csv (processed_data)
+
+**What is it?** All fire incidents at parcels classified as "TOWNHOMES" by TCAD, including both true individual townhome units and multi-unit condo complexes that TCAD mislabels as townhomes. Includes backfilled year-built data from property records for 9 condo complexes missing this data in TCAD.
+
+**How many records?** 46 incidents
+
+**Created by:** `10_townhome_cohort_analysis.py`
+
+**Data quality note:** TCAD's "TOWNHOMES" classification includes 355 multi-unit condo complexes (10-234 units per parcel). True individual townhomes have UNITS <= 1. Filter on the `UNITS` column to distinguish them.
+
+---
+
+### townhome_rates_by_cohort.csv
+
+**What is it?** Fire incident rates per 1,000 parcels for all TCAD "TOWNHOMES" parcels, grouped by fire code era (pre-2019, 2019-2021, post-2021). Includes year-built data backfilled from property records.
+
+**How many records?** 3 (one per code cohort)
+
+**Created by:** `10_townhome_cohort_analysis.py`
+
+**Key finding:** With only 5 structure fires across 3,896 true townhome parcels in 3 years, rates are very low (~1 in 671 parcels/year) but cannot support code cohort comparisons. Would require ~55 years of data at current rates to reach statistical significance.
+
+---
+
+### townhome_cohort_summary.txt
+
+**What is it?** A comprehensive text summary of the townhome analysis including data quality findings, fire rarity context, national NFPA comparisons, and honest assessment of what the data can and cannot support.
+
+**Created by:** `10_townhome_cohort_analysis.py`
 
 ---
 
@@ -361,7 +399,7 @@ These files come from the National Fire Incident Reporting System (NFIRS) data, 
 | **Response area** | One of 711 geographic zones that Austin is divided into for fire response. Each is served by a specific fire station |
 | **Census tract** | A small geographic area defined by the U.S. Census Bureau, typically containing 1,200 to 8,000 people |
 | **Parcel** | A single piece of property (a lot) as defined by the county appraisal district. One parcel might contain a house, an apartment complex, or a commercial building |
-| **Structure fire** | A fire that occurs in a building (as opposed to a vehicle, grass, or trash fire) |
+| **Structure fire** | A fire that occurs in a building. Following NFPA/NFIRS standards, this includes both **non-confined** fires (BOX alarm dispatches where fire spread, NFIRS code 111) and **confined** fires (electrical and cooking fires that stayed at origin, NFIRS codes 113-118). AFD dispatch codes (BOX, ELEC, BBQ) determine response level, not incident classification |
 | **Multifamily** | Housing with multiple units in one building — apartments, condos, duplexes, etc. |
 | **Single-family** | A standalone house on its own lot, designed for one household |
 | **Per 1,000 rate** | A way to make fair comparisons. "5 fires per 1,000 units" means that for every 1,000 housing units, there were 5 fire incidents. This adjusts for the fact that larger areas naturally have more fires |
@@ -369,6 +407,10 @@ These files come from the National Fire Incident Reporting System (NFIRS) data, 
 | **NFIRS** | National Fire Incident Reporting System — a federal database where fire departments report detailed information about fire causes |
 | **ETJ** | Extra-Territorial Jurisdiction — areas outside Austin's city limits but within its planning authority. These areas don't have city zoning |
 | **Sprinkler code** | Austin adopted a residential sprinkler requirement around 2006 (effective ~2010 for new construction). Buildings built after this are more likely to have fire sprinklers |
+| **Townhome fire code cohorts** | Austin changed townhome fire protection requirements over time: Pre-2019 required 2-hour fire separation walls only; 2019-2021 allowed builder's choice between 2-hour walls or 1-hour walls with sprinklers; Post-2021 requires sprinklers in all new townhomes |
+| **Non-confined fire** | A structure fire where flames spread beyond the point of origin, triggering a full BOX alarm response (multiple engines, ladder truck). NFIRS code 111 |
+| **Confined fire** | A structure fire that stayed contained at its origin point (e.g., a cooking fire on a stove, an electrical panel fire). Dispatched as ELEC or BBQ with a lighter response. NFIRS codes 113-118 |
+| **NFPA** | National Fire Protection Association — sets fire safety standards and publishes national fire statistics. Their methodology counts both confined and non-confined fires as structure fires |
 | **HOME initiative** | A proposed Austin land use reform that would allow more housing density in traditionally single-family neighborhoods |
 | **Single-stair building code** | A proposed building code change that would allow residential buildings (typically up to 6 stories) to be built with one stairwell instead of two, enabling more housing units per floor |
 | **FAR (Floor Area Ratio)** | The ratio of a building's total floor area to the size of the lot. Higher FAR = denser development |
