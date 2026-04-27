@@ -9,20 +9,21 @@ Usage:
     python 04c_analysis_by_census_tract.py
 
 Input:
-    processed_data/sf_incidents_with_tracts.csv
+    processed_data/sf_incidents_with_tracts.csv  # All incidents considered are structure fires
     raw_data/census_population.csv
     raw_data/census_housing.csv
     raw_data/census_year_built.csv
     raw_data/census_income.csv
 
 Output:
-    outputs/census_tract_incidents.csv
-    outputs/census_tract_summary.csv
-    outputs/incident_rates_by_housing_and_type.csv
-    outputs/cause_by_housing_type.csv
-    outputs/heat_source_by_housing.csv
-    outputs/sprinkler_by_housing.csv
-    outputs/area_origin_by_housing.csv
+    processed_data/census_demographics.csv
+    processed_data/census_tracts_incidents.geojson
+    outputs/ekyl_outputs/census_tract_incidents.csv
+    outputs/ekyl_outputs/summary_by_urban_class.csv
+    outputs/ekyl_outputs/summary_by_housing_type.csv
+    outputs/ekyl_outputs/building_age_summary.csv
+    outputs/ekyl_outputs/incident_characteristics_by_housing.csv
+    outputs/ekyl_outputs/statistical_tests_census_tracts.txt
 """
 
 import pandas as pd
@@ -32,7 +33,7 @@ import os
 import warnings
 from scipy import stats
 import ast
-from census_variables import YEAR_BUILT_VARS, HOUSING_VARS, POPULATION_VARS, AUSTIN_COUNTIES
+from census_variables import AUSTIN_COUNTIES, URBAN_CLASS, YEAR_BUILT_VARS, HOUSING_VARS, POPULATION_VARS
 
 warnings.filterwarnings('ignore')
 
@@ -71,6 +72,9 @@ def load_data():
     # Parse census tract column
     incidents['tract_list'] = incidents['tract_codes'].apply(parse_census_tracts)
     
+    # For weighting boundary incidents
+    incidents['num_tracts'] = incidents['tract_list'].apply(len)
+
     # Check coverage
     has_tract = incidents['tract_list'].apply(len) > 0
     print(f"  Incidents with tract data: {has_tract.sum():,} ({has_tract.sum()/len(incidents)*100:.1f}%)")
@@ -97,12 +101,13 @@ def load_data():
     # This file collates the column codes and the human-readable labels, leaving coded columns blank.
     # So, only extract based on the column code.
     # In future, if this is buggy, pick the column index based on code, and increment by one.
-    income_data = income_data[['tract', 'Estimate!!Households!!Median income (dollars)']]
+    income_data = income_data[['county', 'tract', 'Estimate!!Households!!Median income (dollars)']]
     
     print(f"  Census tracts with income: {len(income_data)}")
 
     shape_data = gpd.read_file("raw_data/tl_2023_48_tract.shp")
-    shape_data = shape_data[['TRACTCE', 'ALAND']]
+    shape_data = shape_data[shape_data['COUNTYFP'].isin(AUSTIN_COUNTIES.values())]
+    shape_data = shape_data[['COUNTYFP', 'TRACTCE', 'ALAND']]
 
     return incidents, pop_data, housing_data, age_data, income_data, shape_data
 
@@ -118,31 +123,34 @@ def prepare_census_demographics(pop_data, housing_data, age_data, income_data, s
     housing_data = housing_data.rename(columns={'Total': 'total_units', 'tract': 'tract_code'})
     age_data = age_data.rename(columns={'Total': 'total_units_age', 'tract': 'tract_code'})
     income_data = income_data.rename(columns={'Estimate!!Households!!Median income (dollars)': 'median_income', 'tract': 'tract_code'})
-    shape_data = shape_data.rename(columns={'TRACTCE': 'tract_code', 'ALAND': 'land_area_m2'})
-    
+    shape_data = shape_data.rename(columns={'COUNTYFP': 'county', 'TRACTCE': 'tract_code', 'ALAND': 'land_area_m2'})
+
     # Convert tract codes to strings
     pop_data['tract_code'] = pop_data['tract_code'].astype(str)
     housing_data['tract_code'] = housing_data['tract_code'].astype(str)
     age_data['tract_code'] = age_data['tract_code'].astype(str)
     income_data['tract_code'] = income_data['tract_code'].astype(str)
     shape_data['tract_code'] = shape_data['tract_code'].astype(str)
+    shape_data['county'] = shape_data['county'].astype(int)
 
     # Merge population with housing
-    census = pop_data[['tract_code', 'population']].merge(
-        housing_data[['tract_code', 'total_units', '1-unit, detached', '1-unit, attached']],
-        on='tract_code', how='outer'
+    census = pop_data[['county', 'tract_code', 'population']].merge(
+        housing_data[['county', 'tract_code', 'total_units', '1-unit, detached', '1-unit, attached']],
+        on=['county', 'tract_code'], how='outer'
     )
     
     # Merge with building age
     census = census.merge(
-        age_data[['tract_code', 'total_units_age', 'Built 2010-2019', 'Built 2020 or later', 'Built 1939 or earlier']],
-        on='tract_code', how='outer'
+        age_data[['county', 'tract_code', 'total_units_age', 'Built 2010-2019', 'Built 2020 or later', 'Built 1939 or earlier']],
+        on=['county', 'tract_code'], how='outer'
     )
     
     # Calculate single-family percentage
+    ### Q: Do we want '1-unit, attached' to count as single-family?
     census['single_family_units'] = (
         census['1-unit, detached'].fillna(0) + census['1-unit, attached'].fillna(0)
     )
+    census['multifamily_units'] = census['total_units'] - census['single_family_units']
     census['pct_single_family'] = np.where(
         census['total_units'] > 0,
         census['single_family_units'] / census['total_units'] * 100,
@@ -165,21 +173,26 @@ def prepare_census_demographics(pop_data, housing_data, age_data, income_data, s
     
     # Merge with income data
     census = census.merge(
-        income_data[['tract_code', 'median_income']],
-        on='tract_code',
+        income_data[['county','tract_code', 'median_income']],
+        on=['county', 'tract_code'],
         how='left'
     )
     
     # Merge with shape data for land area and density
     census = census.merge(
         shape_data,
-        on='tract_code',
+        on=['county', 'tract_code'],
         how='left'
     )
     # Population density, converted to sq miles
     census['population_density'] = census['population'] / census['land_area_m2'] * 2.59e+6 
 
     print(f"  Census tracts in demographics: {len(census)}")
+    
+    # Add Urban Class
+    urban_class_bins = list(URBAN_CLASS.keys()) + [1000000]
+    census["urban_class"] = pd.cut(census['population_density'],bins=urban_class_bins, labels=list(URBAN_CLASS.values()))
+    
     
     return census
 
@@ -204,9 +217,12 @@ def explode_incidents_by_tract(incidents_df, census_df):
     exploded = pd.DataFrame(pairs)
     print(f"  Incident-tract pairs: {len(exploded):,}")
 
+    # Stage exploded data for secondary processing - eg, map visualization
+    exploded.to_csv("processed_data/incidents_exploded_by_tract.csv", index=False)
+
     exploded = exploded.merge(
-        census_df[['tract_code', 'population', 'total_units', 'pct_single_family', 
-                        'pct_built_2010_plus', 'pct_built_pre1970', 'median_income']],
+        census_df[['tract_code', 'population',  'population_density', 'urban_class', 'total_units', 'single_family_units', 'multifamily_units', 'pct_single_family', 
+                        'pct_built_2010_plus', 'pct_built_pre1970', 'median_income', 'land_area_m2']],
         on='tract_code',
         how='left'
     )
@@ -230,20 +246,33 @@ def aggregate_by_tract(incidents_df):
     """
     print("\nAggregating incidents by census tract...")
     
+    invalid_tracts = len(incidents_df[incidents_df['num_tracts'].fillna(0) <= 0])
+    if invalid_tracts > 0:
+        print(f"Invalid values in num_tracts, either <=0 or NaN: {invalid_tracts}")
+        incidents_df = incidents_df[incidents_df['num_tracts'].fillna(0) > 0]
+
+     # Weight for boundary incidents
+    incidents_df['incident_count'] = 1 / incidents_df['num_tracts']
+
     # Get unique census tracts and demographics
     tract_summary = incidents_df.groupby('tract_code').agg({
-        'incident_number': 'count',
+        'incident_count': 'sum',
         'population': 'first',
+        'population_density': 'first',
+        'urban_class': 'first',
         'total_units': 'first',
+        'single_family_units': 'first',
+        'multifamily_units': 'first',
         'pct_single_family': 'first',
         'pct_built_2010_plus': 'first',
         'pct_built_pre1970': 'first',
         'median_income': 'first',
+        'land_area_m2': 'first',
         'calendaryear': lambda x: x.nunique()  # years of data
     }).reset_index()
     
-    tract_summary.columns = ['tract_code', 'total_incidents', 'population', 'total_units',
-                             'pct_single_family', 'pct_built_2010_plus', 'pct_built_pre1970', 'median_income', 'years']
+    tract_summary.columns = ['tract_code', 'total_incidents', 'population', 'population_density', 'urban_class', 'total_units',
+                             'single_family_units', 'multifamily_units', 'pct_single_family', 'pct_built_2010_plus', 'pct_built_pre1970', 'median_income', 'land_area_m2', 'years']
     
     # Calculate per-capita and per-unit rates
     tract_summary['incidents_per_1000_pop'] = np.where(
@@ -270,9 +299,47 @@ def aggregate_by_tract(incidents_df):
     print(f"  Total incidents: {tract_summary['total_incidents'].sum():,}")
     print(f"  Population covered: {tract_summary['population'].sum():,.0f}")
     print(f"  Housing units covered: {tract_summary['total_units'].sum():,.0f}")
-    
+
     return tract_summary
 
+def analyze_by_urban_class(incidents_df):
+    """
+    Calculate summary statistics by urban classification.
+    """
+    print("\nAnalyzing by urban classification...")
+    print("sample of input: ")
+    print(incidents_df.head())
+    # Aggregate
+    summary = incidents_df.groupby('urban_class').agg({
+        'population': 'sum',
+        'total_units': 'sum',
+        'single_family_units': 'sum',
+        'multifamily_units': 'sum',
+        'total_incidents': 'sum',
+        'land_area_m2': 'sum',
+    }).reset_index()
+    
+    summary.columns = ['urban_class', 'population', 'total_units', 'single_family_units',
+                       'multifamily_units', 'total_incidents', 'area_sq_miles']
+    
+    # Calculate rates
+    summary['incidents_per_1000_pop'] = (summary['total_incidents'] / summary['population']) * 1000
+    summary['incidents_per_1000_units'] = (summary['total_incidents'] / summary['total_units']) * 1000
+    summary['pop_density'] = summary['population'] / summary['area_sq_miles']
+    summary['pct_single_family'] = summary['single_family_units'] / summary['total_units'] * 100
+    
+    # Annualize if we have years data
+    if 'years_of_data' in incidents_df.columns:
+        years = incidents_df['years_of_data'].iloc[0]
+        summary['annual_incidents_per_1000_pop'] = summary['incidents_per_1000_pop'] / years
+        summary['annual_incidents_per_1000_units'] = summary['incidents_per_1000_units'] / years
+    
+    print("\n" + "="*80)
+    print("SUMMARY BY URBAN CLASSIFICATION")
+    print("="*80)
+    print(summary.to_string(index=False))
+    
+    return summary
 
 def analyze_by_housing_type(incident_df):
     """
@@ -388,9 +455,10 @@ def analyze_incident_characteristics(incidents_df):
     # Count by housing type
     for htype in ['Multifamily', 'Mixed-Low', 'Mixed-High', 'Single-Family']:
         subset = valid[valid['housing_type'] == htype]
+        # Fix this to use the weighted incident count
         housing_summary.append({
             'housing_type': htype,
-            'num_incidents': len(subset),
+            'num_incidents': sum(subset['incident_count']),
             'num_tracts': subset['tract_code'].nunique(),
             'avg_incidents_per_tract': len(subset) / subset['tract_code'].nunique() if subset['tract_code'].nunique() > 0 else 0,
             'population': subset['population'].sum(),
@@ -518,6 +586,7 @@ def main():
     tract_summary = aggregate_by_tract(incidents_by_tract)
     
     # Analyses
+    urban_analysis = analyze_by_urban_class(tract_summary)
     housing_analysis = analyze_by_housing_type(tract_summary)
     age_analysis = analyze_by_building_age(tract_summary)
     characteristics = analyze_incident_characteristics(incidents_by_tract)
@@ -525,28 +594,31 @@ def main():
     
     # Save outputs
     os.makedirs("outputs", exist_ok=True)
+
+    urban_analysis.to_csv("outputs/ekyl_outputs/summary_by_urban_class.csv", index=False)
+    print(f"\n✓ Saved: outputs/ekyl_outputs/summary_by_urban_class.csv")
     
-    tract_summary.to_csv("outputs/census_tract_incidents.csv", index=False)
-    print(f"\n✓ Saved: outputs/census_tract_incidents.csv")
+    tract_summary.to_csv("outputs/ekyl_outputs/census_tract_incidents.csv", index=False)
+    print(f"\n✓ Saved: outputs/ekyl_outputs/census_tract_incidents.csv")
     
-    housing_analysis.to_csv("outputs/incident_rates_by_housing_and_type.csv", index=False)
-    print(f"✓ Saved: outputs/incident_rates_by_housing_and_type.csv")
+    housing_analysis.to_csv("outputs/ekyl_outputs/summary_by_housing_type.csv", index=False)
+    print(f"✓ Saved: outputs/ekyl_outputs/summary_by_housing_type.csv")
     
-    age_analysis.to_csv("outputs/building_age_summary.csv", index=False)
-    print(f"✓ Saved: outputs/building_age_summary.csv")
+    age_analysis.to_csv("outputs/ekyl_outputs/building_age_summary.csv", index=False)
+    print(f"✓ Saved: outputs/ekyl_outputs/building_age_summary.csv")
     
-    characteristics.to_csv("outputs/incident_characteristics_by_housing.csv", index=False)
-    print(f"✓ Saved: outputs/incident_characteristics_by_housing.csv")
+    characteristics.to_csv("outputs/ekyl_outputs/incident_characteristics_by_housing.csv", index=False)
+    print(f"✓ Saved: outputs/ekyl_outputs/incident_characteristics_by_housing.csv")
     
-    with open("outputs/statistical_tests_census_tracts.txt", 'w', encoding='utf-8') as f:
+    with open("outputs/ekyl_outputs/statistical_tests_census_tracts.txt", 'w', encoding='utf-8') as f:
         f.write(test_results)
-    print(f"✓ Saved: outputs/statistical_tests_census_tracts.txt")
+    print(f"✓ Saved: outputs/ekyl_outputs/statistical_tests_census_tracts.txt")
     
     # Print summary statistics
     print("\n" + "="*80)
     print("SUMMARY STATISTICS")
     print("="*80)
-    print(f"Total structure fire incidents: {incidents['incident_number'].nunique():,}")
+    print(f"Total structure fire incidents: {incidents.shape[0]:,}")
     print(f"Total incident-tract pairs: {len(incidents_by_tract):,}")
     print(f"Census tracts with incidents: {tract_summary['tract_code'].nunique():,}")
     print(f"Total population in affected tracts: {tract_summary['population'].sum():,.0f}")
