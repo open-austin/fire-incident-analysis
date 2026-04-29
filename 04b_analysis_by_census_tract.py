@@ -18,12 +18,12 @@ Input:
 Output:
     processed_data/census_demographics.csv
     processed_data/census_tracts_incidents.geojson
-    outputs/ekyl_outputs/census_tract_incidents.csv
-    outputs/ekyl_outputs/summary_by_urban_class.csv
-    outputs/ekyl_outputs/summary_by_housing_type.csv
-    outputs/ekyl_outputs/building_age_summary.csv
-    outputs/ekyl_outputs/incident_characteristics_by_housing.csv
-    outputs/ekyl_outputs/statistical_tests_census_tracts.txt
+    outputs/second-branch-outputs/census_tract_incidents.csv
+    outputs/second-branch-outputs/summary_by_urban_class.csv
+    outputs/second-branch-outputs/summary_by_housing_type.csv
+    outputs/second-branch-outputs/building_age_summary.csv
+    outputs/second-branch-outputs/incident_characteristics_by_housing.csv
+    outputs/second-branch-outputs/statistical_tests_census_tracts.txt
 """
 
 import pandas as pd
@@ -595,24 +595,24 @@ def main():
     # Save outputs
     os.makedirs("outputs", exist_ok=True)
 
-    urban_analysis.to_csv("outputs/ekyl_outputs/summary_by_urban_class.csv", index=False)
-    print(f"\n✓ Saved: outputs/ekyl_outputs/summary_by_urban_class.csv")
+    urban_analysis.to_csv("outputs/second-branch-outputs/summary_by_urban_class.csv", index=False)
+    print(f"\n✓ Saved: outputs/second-branch-outputs/summary_by_urban_class.csv")
     
-    tract_summary.to_csv("outputs/ekyl_outputs/census_tract_incidents.csv", index=False)
-    print(f"\n✓ Saved: outputs/ekyl_outputs/census_tract_incidents.csv")
+    tract_summary.to_csv("outputs/second-branch-outputs/census_tract_incidents.csv", index=False)
+    print(f"\n✓ Saved: outputs/second-branch-outputs/census_tract_incidents.csv")
     
-    housing_analysis.to_csv("outputs/ekyl_outputs/summary_by_housing_type.csv", index=False)
-    print(f"✓ Saved: outputs/ekyl_outputs/summary_by_housing_type.csv")
+    housing_analysis.to_csv("outputs/second-branch-outputs/summary_by_housing_type.csv", index=False)
+    print(f"✓ Saved: outputs/second-branch-outputs/summary_by_housing_type.csv")
     
-    age_analysis.to_csv("outputs/ekyl_outputs/building_age_summary.csv", index=False)
-    print(f"✓ Saved: outputs/ekyl_outputs/building_age_summary.csv")
+    age_analysis.to_csv("outputs/second-branch-outputs/building_age_summary.csv", index=False)
+    print(f"✓ Saved: outputs/second-branch-outputs/building_age_summary.csv")
     
-    characteristics.to_csv("outputs/ekyl_outputs/incident_characteristics_by_housing.csv", index=False)
-    print(f"✓ Saved: outputs/ekyl_outputs/incident_characteristics_by_housing.csv")
+    characteristics.to_csv("outputs/second-branch-outputs/incident_characteristics_by_housing.csv", index=False)
+    print(f"✓ Saved: outputs/second-branch-outputs/incident_characteristics_by_housing.csv")
     
-    with open("outputs/ekyl_outputs/statistical_tests_census_tracts.txt", 'w', encoding='utf-8') as f:
+    with open("outputs/second-branch-outputs/statistical_tests_census_tracts.txt", 'w', encoding='utf-8') as f:
         f.write(test_results)
-    print(f"✓ Saved: outputs/ekyl_outputs/statistical_tests_census_tracts.txt")
+    print(f"✓ Saved: outputs/second-branch-outputs/statistical_tests_census_tracts.txt")
     
     # Print summary statistics
     print("\n" + "="*80)

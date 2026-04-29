@@ -9,19 +9,19 @@ Usage:
 
 Input:
     processed_data/census_tracts_with_incidents.geojson
-    outputs/ekyl_outputs/summary_by_urban_class.csv
-    outputs/ekyl_outputs/summary_by_housing_type.csv
+    outputs/second-branch-outputs/summary_by_urban_class.csv
+    outputs/second-branch-outputs/summary_by_housing_type.csv
 
 Output:
-    outputs/ekyl_outputs/map_incidents_per_capita.html
-    outputs/ekyl_outputs/map_urban_classification.html
-    outputs/ekyl_outputs/map_housing_typology.html
-    outputs/ekyl_outputs/map_building_age.html
-    outputs/ekyl_outputs/map_fire_stations.html
-    outputs/ekyl_outputs/chart_urban_comparison.png
-    outputs/ekyl_outputs/chart_housing_correlation.png
-    outputs/ekyl_outputs/chart_building_age.png
-    outputs/ekyl_outputs/chart_time_series.png
+    outputs/second-branch-outputs/map_incidents_per_capita.html
+    outputs/second-branch-outputs/map_urban_classification.html
+    outputs/second-branch-outputs/map_housing_typology.html
+    outputs/second-branch-outputs/map_building_age.html
+    outputs/second-branch-outputs/map_fire_stations.html
+    outputs/second-branch-outputs/chart_urban_comparison.png
+    outputs/second-branch-outputs/chart_housing_correlation.png
+    outputs/second-branch-outputs/chart_building_age.png
+    outputs/second-branch-outputs/chart_time_series.png
 """
 
 import pandas as pd
@@ -88,8 +88,8 @@ def load_data():
     tracts['incidents_per_1000_pop'] = (tracts['total_incidents'] / tracts['population']) * 1000
 
 
-    summary_urban = pd.read_csv("outputs/ekyl_outputs/summary_by_urban_class.csv")
-    summary_housing = pd.read_csv("outputs/ekyl_outputs/summary_by_housing_type.csv")
+    summary_urban = pd.read_csv("outputs/second-branch-outputs/summary_by_urban_class.csv")
+    summary_housing = pd.read_csv("outputs/second-branch-outputs/summary_by_housing_type.csv")
     
     return tracts, summary_urban, summary_housing
 
@@ -171,8 +171,8 @@ def create_choropleth_map(gdf, column, title, filename, colormap='YlOrRd', scale
         tooltip=tooltip
     ).add_to(m)
     
-    m.save(f"outputs/ekyl_outputs/{filename}")
-    print(f"    ✓ Saved: outputs/ekyl_outputs/{filename}")
+    m.save(f"outputs/second-branch-outputs/{filename}")
+    print(f"    ✓ Saved: outputs/second-branch-outputs/{filename}")
 
 
 def create_categorical_map(gdf, column, title, filename, colors=None):
@@ -234,8 +234,8 @@ def create_categorical_map(gdf, column, title, filename, colors=None):
     '''
     m.get_root().html.add_child(folium.Element(legend_html))
     
-    m.save(f"outputs/ekyl_outputs/{filename}")
-    print(f"    ✓ Saved: outputs/ekyl_outputs/{filename}")
+    m.save(f"outputs/second-branch-outputs/{filename}")
+    print(f"    ✓ Saved: outputs/second-branch-outputs/{filename}")
 
 
 def create_bar_chart(summary_df, filename):
@@ -285,9 +285,9 @@ def create_bar_chart(summary_df, filename):
                 f'{val:.0f}%', ha='center', va='bottom', fontsize=11, fontweight='bold')
     
     plt.tight_layout()
-    plt.savefig(f"outputs/ekyl_outputs/{filename}", dpi=150, bbox_inches='tight')
+    plt.savefig(f"outputs/second-branch-outputs/{filename}", dpi=150, bbox_inches='tight')
     plt.close()
-    print(f"    ✓ Saved: outputs/ekyl_outputs/{filename}")
+    print(f"    ✓ Saved: outputs/second-branch-outputs/{filename}")
 
 
 def create_scatter_plot(gdf, filename):
@@ -355,9 +355,9 @@ def create_scatter_plot(gdf, filename):
     )
     
     plt.tight_layout()
-    plt.savefig(f"outputs/ekyl_outputs/{filename}", dpi=150, bbox_inches='tight')
+    plt.savefig(f"outputs/second-branch-outputs/{filename}", dpi=150, bbox_inches='tight')
     plt.close()
-    print(f"    ✓ Saved: outputs/ekyl_outputs/{filename}")
+    print(f"    ✓ Saved: outputs/second-branch-outputs/{filename}")
 
 
 def create_summary_table_image(summary_df, filename):
@@ -404,9 +404,9 @@ def create_summary_table_image(summary_df, filename):
     
     plt.title('Fire Incident Rates by Urban Classification', fontsize=14, fontweight='bold', pad=20)
     
-    plt.savefig(f"outputs/ekyl_outputs/{filename}", dpi=150, bbox_inches='tight', facecolor='white')
+    plt.savefig(f"outputs/second-branch-outputs/{filename}", dpi=150, bbox_inches='tight', facecolor='white')
     plt.close()
-    print(f"    ✓ Saved: outputs/ekyl_outputs/{filename}")
+    print(f"    ✓ Saved: outputs/second-branch-outputs/{filename}")
 
 
 
@@ -416,11 +416,11 @@ def create_building_age_chart(filename):
     print(f"  Creating: {filename}")
 
     # Load building age summary
-    if not os.path.exists("outputs/ekyl_outputs/summary_by_building_age.csv"):
+    if not os.path.exists("outputs/second-branch-outputs/summary_by_building_age.csv"):
         print(f"    Warning: summary_by_building_age.csv not found")
         return
 
-    df = pd.read_csv("outputs/ekyl_outputs/summary_by_building_age.csv")
+    df = pd.read_csv("outputs/second-branch-outputs/summary_by_building_age.csv")
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 
@@ -448,9 +448,9 @@ def create_building_age_chart(filename):
                 f'{val:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
 
     plt.tight_layout()
-    plt.savefig(f"outputs/ekyl_outputs/{filename}", dpi=150, bbox_inches='tight')
+    plt.savefig(f"outputs/second-branch-outputs/{filename}", dpi=150, bbox_inches='tight')
     plt.close()
-    print(f"    ✓ Saved: outputs/ekyl_outputs/{filename}")
+    print(f"    ✓ Saved: outputs/second-branch-outputs/{filename}")
 
 
 def create_building_age_chart_yearly(filename):
@@ -503,9 +503,9 @@ def create_building_age_chart_yearly(filename):
     ax.legend(title='Year', loc='upper right')
 
     plt.tight_layout()
-    plt.savefig(f"outputs/ekyl_outputs/{filename}", dpi=150, bbox_inches='tight')
+    plt.savefig(f"outputs/second-branch-outputs/{filename}", dpi=150, bbox_inches='tight')
     plt.close()
-    print(f"    ✓ Saved: outputs/ekyl_outputs/{filename}")
+    print(f"    ✓ Saved: outputs/second-branch-outputs/{filename}")
 
 
 def create_urban_comparison_yearly(filename):
@@ -565,9 +565,9 @@ def create_urban_comparison_yearly(filename):
     ax.legend(title='Year', loc='upper right')
 
     plt.tight_layout()
-    plt.savefig(f"outputs/ekyl_outputs/{filename}", dpi=150, bbox_inches='tight')
+    plt.savefig(f"outputs/second-branch-outputs/{filename}", dpi=150, bbox_inches='tight')
     plt.close()
-    print(f"    ✓ Saved: outputs/ekyl_outputs/{filename}")
+    print(f"    ✓ Saved: outputs/second-branch-outputs/{filename}")
 
 
 
@@ -575,11 +575,11 @@ def create_structure_fire_housing_trend_chart(filename):
     """Create grouped bar chart of structure fires by housing type and year"""
     print(f"  Creating: {filename}")
 
-    if not os.path.exists("outputs/ekyl_outputs/structure_fires_by_housing_trend.csv"):
+    if not os.path.exists("outputs/second-branch-outputs/structure_fires_by_housing_trend.csv"):
         print(f"    Warning: structure_fires_by_housing_trend.csv not found")
         return
 
-    df = pd.read_csv("outputs/ekyl_outputs/structure_fires_by_housing_trend.csv")
+    df = pd.read_csv("outputs/second-branch-outputs/structure_fires_by_housing_trend.csv")
 
     fig, ax = plt.subplots(figsize=(12, 6))
 
@@ -612,20 +612,20 @@ def create_structure_fire_housing_trend_chart(filename):
     ax.set_ylim(bottom=0)
 
     plt.tight_layout()
-    plt.savefig(f"outputs/ekyl_outputs/{filename}", dpi=150, bbox_inches='tight')
+    plt.savefig(f"outputs/second-branch-outputs/{filename}", dpi=150, bbox_inches='tight')
     plt.close()
-    print(f"    ✓ Saved: outputs/ekyl_outputs/{filename}")
+    print(f"    ✓ Saved: outputs/second-branch-outputs/{filename}")
 
 
 def create_structure_fire_urban_trend_chart(filename):
     """Create grouped bar chart of structure fires by urban class and year"""
     print(f"  Creating: {filename}")
 
-    if not os.path.exists("outputs/ekyl_outputs/structure_fires_by_urban_trend.csv"):
+    if not os.path.exists("outputs/second-branch-outputs/structure_fires_by_urban_trend.csv"):
         print(f"    Warning: structure_fires_by_urban_trend.csv not found")
         return
 
-    df = pd.read_csv("outputs/ekyl_outputs/structure_fires_by_urban_trend.csv")
+    df = pd.read_csv("outputs/second-branch-outputs/structure_fires_by_urban_trend.csv")
 
     fig, ax = plt.subplots(figsize=(10, 6))
 
@@ -657,9 +657,9 @@ def create_structure_fire_urban_trend_chart(filename):
     ax.set_ylim(bottom=0)
 
     plt.tight_layout()
-    plt.savefig(f"outputs/ekyl_outputs/{filename}", dpi=150, bbox_inches='tight')
+    plt.savefig(f"outputs/second-branch-outputs/{filename}", dpi=150, bbox_inches='tight')
     plt.close()
-    print(f"    ✓ Saved: outputs/ekyl_outputs/{filename}")
+    print(f"    ✓ Saved: outputs/second-branch-outputs/{filename}")
 
 
 def create_time_series_chart(filename):
@@ -667,11 +667,11 @@ def create_time_series_chart(filename):
     print(f"  Creating: {filename}")
 
     # Load time series data
-    if not os.path.exists("outputs/ekyl_outputs/time_series_analysis.csv"):
+    if not os.path.exists("outputs/second-branch-outputs/time_series_analysis.csv"):
         print(f"    Warning: time_series_analysis.csv not found")
         return
 
-    df = pd.read_csv("outputs/ekyl_outputs/time_series_analysis.csv")
+    df = pd.read_csv("outputs/second-branch-outputs/time_series_analysis.csv")
 
     fig, ax = plt.subplots(figsize=(10, 6))
 
@@ -701,9 +701,9 @@ def create_time_series_chart(filename):
     )
 
     plt.tight_layout()
-    plt.savefig(f"outputs/ekyl_outputs/{filename}", dpi=150, bbox_inches='tight')
+    plt.savefig(f"outputs/second-branch-outputs/{filename}", dpi=150, bbox_inches='tight')
     plt.close()
-    print(f"    ✓ Saved: outputs/ekyl_outputs/{filename}")
+    print(f"    ✓ Saved: outputs/second-branch-outputs/{filename}")
 
 
 def create_building_age_map(gdf, filename):
@@ -751,8 +751,8 @@ def create_building_age_map(gdf, filename):
         tooltip=tooltip
     ).add_to(m)
 
-    m.save(f"outputs/ekyl_outputs/{filename}")
-    print(f"    ✓ Saved: outputs/ekyl_outputs/{filename}")
+    m.save(f"outputs/second-branch-outputs/{filename}")
+    print(f"    ✓ Saved: outputs/second-branch-outputs/{filename}")
 
 
 def create_station_map(gdf, filename):
@@ -822,8 +822,8 @@ def create_station_map(gdf, filename):
     '''
     m.get_root().html.add_child(folium.Element(legend_html))
 
-    m.save(f"outputs/ekyl_outputs/{filename}")
-    print(f"    ✓ Saved: outputs/ekyl_outputs/{filename}")
+    m.save(f"outputs/second-branch-outputs/{filename}")
+    print(f"    ✓ Saved: outputs/second-branch-outputs/{filename}")
 
 
 def main():
@@ -893,22 +893,22 @@ def main():
     print("OUTPUTS CREATED")
     print("="*60)
     
-    outputs = os.listdir("outputs/ekyl_outputs")
+    outputs = os.listdir("outputs/second-branch-outputs")
     for f in sorted(outputs):
-        print(f"  - outputs/ekyl_outputs/{f}")
+        print(f"  - outputs/second-branch-outputs/{f}")
     
     print("\n" + "="*60)
     print("NEXT STEPS")
     print("="*60)
     print("""
 1. Review the visualizations:
-   - Open outputs/ekyl_outputs/map_incidents_per_capita.html in a browser
-   - Open outputs/ekyl_outputs/map_urban_classification.html in a browser
+   - Open outputs/second-branch-outputs/map_incidents_per_capita.html in a browser
+   - Open outputs/second-branch-outputs/map_urban_classification.html in a browser
    - Review the PNG charts
 
 2. Prepare the findings brief:
    - Key finding: Do suburban areas have higher per-capita incident rates?
-   - Statistical significance: Check outputs/ekyl_outputs/statistical_tests.txt
+   - Statistical significance: Check outputs/second-branch-outputs/statistical_tests.txt
    - Housing correlation: Does % single-family predict incident rates?
 
 3. Share with Tim for review
