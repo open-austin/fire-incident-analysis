@@ -3,6 +3,7 @@ raw_data/
 outputs/
 processed_data/response_areas_final.geojson
 processed_data/response_areas_with_demographics.geojson
+processed_data/parcels_value_per_acre_metro.parquet
 
 # Python
 __pycache__/
