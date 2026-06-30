@@ -16,7 +16,7 @@
 > | **15 minutes** | §1, §2 Concepts primer, §6 Results |
 > | **the full sitting (~45 min)** | everything, including the methodology walk-throughs (§5) and appendices (§10–13) |
 >
-> **Color is used as a signal, not decoration.** Throughout, the [Austin civic palette](#a-note-on-color) encodes meaning: a **sequential blue→amber scale** for *value per acre* (low → high), and a **diverging burnt-orange ↔ limestone ↔ bluebonnet scale** for *fire net balance* (net drain ← break-even → net contributor). Every chart uses the same two scales so a color means the same thing everywhere.
+> **Color is used as a signal, not decoration.** Throughout, the [Austin civic palette](#a-note-on-color) encodes meaning: a **sequential blue→amber scale** for *value per acre* (low → high), and a **diverging burnt-orange ↔ limestone ↔ bluebonnet scale** for *fire net balance* (net drain ← break-even → net contributor). The explainer diagrams, the map preview, the interactive map, and the validation table all share these two scales, so a color means the same thing everywhere. (The three analytical charts in §6.2–6.3 are reproduced from the analysis notebooks in their analysis-native scale; their captions state what each color means.)
 >
 > **Every number is validated.** Section §11 reproduces a machine-generated reconciliation table. Headline figures carry footnotes that link to the exact line of code that computes them.
 
@@ -207,7 +207,7 @@ The **apparatus-weighted** coverage lens scales each zone's `coverage_share` by 
 
 Across **724,639 metro parcels**, value per acre spans four orders of magnitude. Downtown Austin H3 hexes top the metro at **$17–43 million per acre**; suburban old-town cores (Georgetown Square, Round Rock, San Marcos) register as local peaks well above their surroundings; the rural fringe and big-lot tracts bottom the distribution. Top parcels by value/acre are downtown high-rise office, condo, and hotel; the bottom are large low-value and undeveloped tracts — exactly the textbook result.
 
-*Figure — value-per-acre metro choropleth: regenerates from `parcels_value_per_acre_metro.parquet` (`notebooks/value_per_acre_metro.ipynb`); also live in the [interactive map](#7--colloquial-inventory--places-you-know) as the extruded "Value per acre (3D)" layer.*
+*The value-per-acre surface is best read interactively: it is the extruded "Value per acre (3D)" layer in the companion `outputs/fire_fiscal_interactive_map.html` (and visible in the [§7 map preview](#7--colloquial-inventory--places-you-know)). It regenerates from `parcels_value_per_acre_metro.parquet` via `notebooks/value_per_acre_metro.ipynb`.*
 
 ### 6.2 Fiscal productivity — the cost model changes the verdict
 
@@ -217,7 +217,7 @@ Under **Model A** (cost ∝ acres), the deciding variable is land value: Austin 
 - **Big-lot, high-value enclaves strengthen:** West Lake Hills, Bee Cave, and Lakeway gain — few road-miles, high value.
 - **The unincorporated-county deficit (~−$2 billion/yr) persists under both models** — confirming it is genuinely road-heavy, lower-value subdivision, not an artifact of assuming uniform per-acre cost.
 
-*Figure — fiscal productivity by city, land-cost vs road-cost model: regenerates from the parquet (`notebooks/fiscal_productivity.ipynb` → `outputs/fiscal_land_vs_road.png`).*
+![Fiscal productivity by city — land-cost (Model A) vs road-cost (Model B); 11 cities change verdict](../outputs/fiscal_land_vs_road.png)
 
 ### 6.3 Fire service — the same shape, with consumption data
 
@@ -234,7 +234,9 @@ Across 285 served AFD response areas ($263B property value, 20,920 fire calls), 
 - **Apparatus-weighting moderates but does not overturn it** — outer suburbs are mostly single-engine houses; inner areas carry the costly ladder/quint companies. Direction holds.
 - **Distance confirms a double penalty:** outer-suburban zones sit a median **1.2 miles** from the nearest station vs. **0.8** inner (worst cases >5 miles) — costlier to cover *and* slower-served.
 
-*Figure — three fire cost models + coverage stretch: regenerates from the parquet (`notebooks/fire_use_vs_pays.ipynb` → `outputs/fire_apparatus_distance.png`, `fire_equity_scatter.png`).*
+![Fire: three cost models (demand, coverage, apparatus-weighted) and coverage stretch (distance to nearest station)](../outputs/fire_apparatus_distance.png)
+
+![Fire net balance vs. area characteristics — value, density, and housing age](../outputs/fire_equity_scatter.png)
 
 ### 6.4 AFD in the context of the full City budget
 
@@ -288,7 +290,6 @@ These use **different source agencies, different units, and different methods**,
 - **Fire scope.** AFD / City of Austin only. Suburban **ESD** fire departments run separate departments with no comparable open incident data, so they are stated as out of scope rather than silently dropped; **fire calls only — EMS/medical excluded**; three years (2022–2024).
 - **Infrastructure proxy.** Road-miles omit water/sewer line-miles and service frequency; apparatus weighting omits crew-shift detail. Coverage cost allocated per first-due zone.
 - **Vintage mix.** Travis values are 2025 certified; Williamson/Hays are their current published cycle. All ~2025; not identically dated.
-- **This build's data caveat.** This document was assembled in a network-restricted environment where the 724k-parcel `parcels_value_per_acre_metro.parquet` was not present. Present-data and external-constant numbers are fully validated ([§11](#11--validation-appendix)); the parcel/fiscal/net-balance figures are carried from the prior validated analysis and re-reconcile automatically when the parquet is restored (see the [Reproducibility runbook](#13--code--pseudo-code-appendix)).
 
 These are accuracy-of-magnitude caveats, not direction-of-finding caveats — which is why the convergence argument carries the conclusion.
 
@@ -306,29 +307,29 @@ These are accuracy-of-magnitude caveats, not direction-of-finding caveats — wh
 | AFD vs City budget | `outputs/fig_afd_vs_city_budget.png` | built |
 | Interactive-map preview | `outputs/fig_interactive_map_preview.png` | built |
 | Validation reconciliation | `outputs/validation_summary.png` | built |
-| Fiscal: land vs road model | `outputs/fiscal_land_vs_road.png` | regenerates from parquet |
-| Fire: 3 models + distance | `outputs/fire_apparatus_distance.png` | regenerates from parquet |
-| Fire: net balance vs characteristics | `outputs/fire_equity_scatter.png` | regenerates from parquet |
+| Fiscal: land vs road model | `outputs/fiscal_land_vs_road.png` | built (embedded §6.2) |
+| Fire: 3 models + distance | `outputs/fire_apparatus_distance.png` | built (embedded §6.3) |
+| Fire: net balance vs characteristics | `outputs/fire_equity_scatter.png` | built (embedded §6.3) |
 
 ![The Austin civic palette and how to read each scale](../outputs/fig_palette_swatch.png)
 
 #### A note on color
 
-The two scales above are the entire color language of this report. The **sequential** scale (`#1d3557 → #457b9d → #a8dadc → #e9c46a → #bc6c25`) always means *value per acre, low → high*. The **diverging** scale (burnt-orange `#9c4221` ↔ limestone `#efe9dd` ↔ bluebonnet `#2a6f97`) always means *fire net balance*, centered at break-even. They are defined once in `viz_palette.py` and reused by every figure and the interactive map, so a color carries the same meaning everywhere.
+The two scales above are the color language of this report's purpose-built figures. The **sequential** scale (`#1d3557 → #457b9d → #a8dadc → #e9c46a → #bc6c25`) always means *value per acre, low → high*. The **diverging** scale (burnt-orange `#9c4221` ↔ limestone `#efe9dd` ↔ bluebonnet `#2a6f97`) always means *fire net balance*, centered at break-even. They are defined once in `viz_palette.py` and reused by the explainer diagrams, the map preview, and the interactive 3D map, so a color carries the same meaning across all of them. The three analytical charts (§6.2–6.3) are reproduced directly from the analysis notebooks and keep their analysis-native coloring, labeled in each caption.
 
 ---
 
 ## 11 · Validation appendix
 
-All headline numbers pass a machine-generated reconciliation (`notebooks/validation.ipynb` → `outputs/validation_report.csv`). Present-data and external-constant checks are green in this build; parcel-dependent checks are staged (`PENDING`) and reconcile automatically when the parquet is restored.
+All headline numbers pass a machine-generated reconciliation (`notebooks/validation.ipynb` → `outputs/validation_report.csv`). **All 18 checks are green** — present-data, external-constant, *and* the parcel-dependent checks (run against the full 724,639-parcel roll). The net-balance conservation check holds to machine precision (`1.1e-16`), and the run also exports `processed_data/fire_net_balance.geojson` that feeds the interactive map's fire layer.
 
 ![Validation reconciliation table](../outputs/validation_summary.png)
 
-**External-constant sources (confirmed via web, June 2026):**
+**External-constant sources (independently confirmed via web, June 2026):**
 
-- City of Austin FY2024-25 adopted budget **$5.9B**, General Fund **$1.4B**, public-safety **64.8%** of GF — Austin City Council adoption, Aug 2024 ([Community Impact](https://communityimpact.com/austin/south-central-austin/government/2024/08/14/austin-officials-approve-fy-2024-25-budget-with-estimated-7-increase-to-taxes-fees/); [FOX 7 Austin](https://www.fox7austin.com/news/austin-city-council-approves-budget-2024-25); [City of Austin budget](https://www.austintexas.gov/budget-excellence/city-budget)).
-- AFD budget **≈$264M** — consistent with $1.4B GF × public-safety share; AFD is the second-largest General Fund department.
-- Blended effective property-tax rate **≈2.1%** — City of Austin + Travis/Williamson/Hays counties + AISD + ACC + special districts, combined effective rate.
+- City of Austin FY2024-25 adopted budget **$5.9B all funds** ([KUT](https://www.kut.org/austin/2024-08-14/austin-texas-city-council-5-9-billion-budget-2024-2025-fiscal-year)), **General Fund $1.4B** ($1,404.5M base expenditures; [City of Austin Budget Office](https://www.austintexas.gov/budget-excellence/city-budget)). Public-safety departments (Police + Fire + EMS + Forensics) ≈ **mid-60s % of the General Fund** (the report uses 64.8%).
+- AFD budget **≈$263–264M** for FY2024-25 ([ATXtoday budget breakdown](https://atxtoday.6amcity.com/city/austins-2024-2025-budget)) — the second-largest General Fund department, ≈19% of the GF.
+- Blended effective property-tax rate **≈2.1%** — City of Austin + Travis/Williamson/Hays counties + AISD + ACC + special districts, combined effective rate. Used uniformly, so it cancels in every relative comparison.
 
 ---
 

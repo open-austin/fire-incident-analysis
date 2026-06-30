@@ -212,6 +212,56 @@ def fig_afd_vs_city_budget():
     _save(fig, "fig_afd_vs_city_budget.png")
 
 
+# ----------------------------------------------------------------- 7. interactive-map static preview
+def fig_interactive_map_preview():
+    """Static, print-ready preview of the interactive 3D map: response-area choropleth
+    coloured by fire net balance (DIV palette, 0-centred) with colloquial landmark pins.
+    Builds when response_areas_final.geojson + fire_net_balance.geojson are present."""
+    import geopandas as gpd
+    import matplotlib.patheffects as pe
+    ra_path = PROC / "response_areas_final.geojson"
+    nb_path = PROC / "fire_net_balance.geojson"
+    if not (ra_path.exists() and nb_path.exists()):
+        print("[staged] response areas / fire_net_balance.geojson absent — skipping map preview")
+        return
+    ra = gpd.read_file(ra_path).to_crs(4326)[["response_area_id", "geometry"]]
+    nb = gpd.read_file(nb_path)[["response_area_id", "net_coverage_M"]]
+    gdf = ra.merge(nb, on="response_area_id", how="left")
+    served = gdf[gdf["net_coverage_M"].notna()].copy()
+    vmax = float(np.nanpercentile(np.abs(served["net_coverage_M"]), 98)) or 1.0
+    norm = matplotlib.colors.TwoSlopeNorm(vcenter=0, vmin=-vmax, vmax=vmax)
+
+    LANDMARKS = [
+        ("Downtown", -97.7431, 30.2672, "hi"), ("The Domain", -97.7261, 30.4007, "hi"),
+        ("Mueller", -97.7050, 30.2980, "hi"), ("West Lake Hills", -97.8060, 30.2930, "hi"),
+        ("Lakeway", -97.9794, 30.3637, "hi"), ("Bee Cave", -97.9469, 30.3088, "hi"),
+        ("Round Rock", -97.6789, 30.5083, "mix"), ("Northland", -97.7340, 30.3600, "mix"),
+        ("Georgetown", -97.6770, 30.6333, "lo"), ("Kyle", -97.8770, 29.9890, "lo"),
+        ("Buda", -97.8400, 30.0855, "lo"), ("San Marcos", -97.9414, 29.8833, "lo"),
+    ]
+    pin = {"hi": vp.BLUEBONNET, "mix": "#e9c46a", "lo": vp.BURNT_ORANGE}
+
+    fig, ax = plt.subplots(figsize=(9, 9.6))
+    gdf.plot(ax=ax, color="#eceae2", edgecolor="#d8d2c4", linewidth=0.2, zorder=1)
+    served.plot(ax=ax, column="net_coverage_M", cmap=DIV, norm=norm,
+                edgecolor="#9a958a", linewidth=0.25, zorder=2)
+    for name, lon, lat, kind in LANDMARKS:
+        ax.scatter(lon, lat, s=64, color=pin[kind], edgecolor="white", linewidth=1.3, zorder=4)
+        ax.annotate(name, (lon, lat), xytext=(5, 3), textcoords="offset points",
+                    fontsize=8, fontweight="bold", color=vp.INK, zorder=5,
+                    path_effects=[pe.withStroke(linewidth=2.2, foreground="white")])
+    sm = plt.cm.ScalarMappable(cmap=DIV, norm=norm)
+    cb = fig.colorbar(sm, ax=ax, fraction=0.036, pad=0.02, shrink=0.62)
+    cb.set_label("fire net balance — coverage lens ($M/yr)\n"
+                 "burnt-orange = net drain   ·   bluebonnet = contributor", fontsize=8)
+    ax.set_title("Fire net balance by AFD response area, with colloquial landmarks\n"
+                 "(static preview of the interactive 3D map)", fontsize=12, color=vp.INK)
+    ax.set_xlabel("longitude"); ax.set_ylabel("latitude")
+    ax.set_xlim(served.total_bounds[0] - 0.05, served.total_bounds[2] + 0.20)
+    ax.set_ylim(served.total_bounds[1] - 0.05, served.total_bounds[3] + 0.05)
+    _save(fig, "fig_interactive_map_preview.png")
+
+
 # ----------------------------------------------------------------- staged: data-derived charts
 def regen_data_charts():
     """Regenerate fiscal_*/fire_* charts + colloquial inventory in the Austin palette.
@@ -235,6 +285,7 @@ def main():
     fig_concept_coverage_demand()
     fig_palette_swatch()
     fig_afd_vs_city_budget()
+    fig_interactive_map_preview()
     regen_data_charts()
     print("done.")
 
