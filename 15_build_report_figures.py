@@ -156,18 +156,19 @@ def fig_concept_coverage_demand():
 
 # ----------------------------------------------------------------- 5. palette swatch
 def fig_palette_swatch():
-    fig, axes = plt.subplots(2, 1, figsize=(9, 3.4))
+    fig, axes = plt.subplots(2, 1, figsize=(9, 4.2))
     grad = np.linspace(0, 1, 256).reshape(1, -1)
     axes[0].imshow(grad, aspect="auto", cmap=SEQ)
-    axes[0].set_title("SEQ_VPA — value per acre (low → high)", fontsize=10, loc="left")
+    axes[0].set_title("SEQ_VPA — value per acre (low → high)", fontsize=10, loc="left", pad=6)
     axes[0].set_xticks([0, 255]); axes[0].set_xticklabels(["low $/acre", "high $/acre"]); axes[0].set_yticks([])
     axes[1].imshow(grad, aspect="auto", cmap=DIV)
-    axes[1].set_title("DIV_NET — fire net balance (drain ← 0 → contributor)", fontsize=10, loc="left")
+    axes[1].set_title("DIV_NET — fire net balance (drain ← 0 → contributor)", fontsize=10, loc="left", pad=6)
     axes[1].set_xticks([0, 128, 255])
     axes[1].set_xticklabels(["net drain (−)", "break-even (0)", "net contributor (+)"]); axes[1].set_yticks([])
     for ax in axes:
         ax.tick_params(length=0)
     fig.suptitle("Austin civic palette — how to read each scale", fontsize=12)
+    fig.subplots_adjust(hspace=0.85, top=0.86, bottom=0.12)
     _save(fig, "fig_palette_swatch.png")
 
 
@@ -262,20 +263,83 @@ def fig_interactive_map_preview():
     _save(fig, "fig_interactive_map_preview.png")
 
 
+# ----------------------------------------------------------------- 8. ranked colloquial inventory
+def fig_colloquial_inventory(n=8):
+    """Ranked high/low table of AFD response areas by exact value-per-acre and fire net
+    balance (coverage lens). Computes value/acre per area by spatially joining the parcel
+    roll to response areas, merges the validated net-balance export, writes
+    outputs/colloquial_inventory.csv, and renders the top-N contributors / bottom-N drains
+    as an Austin-palette table PNG. Requires the parquet + fire_net_balance.geojson."""
+    nb_path = PROC / "fire_net_balance.geojson"
+    if not (METRO_PARQUET.exists() and nb_path.exists()):
+        print("[staged] parquet / fire_net_balance.geojson absent — skipping colloquial inventory")
+        return
+    import geopandas as gpd
+    import pandas as pd
+
+    g = gpd.read_parquet(METRO_PARQUET)
+    ra = gpd.read_file(PROC / "response_areas_final.geojson").to_crs(4326)[["response_area_id", "geometry"]]
+    cent = g.to_crs(2277).geometry.centroid.to_crs(4326)
+    pts = gpd.GeoDataFrame(g[["market_value", "land_acres"]].copy(), geometry=cent, crs=4326)
+    j = gpd.sjoin(pts, ra, predicate="within")
+    agg = (j.groupby("response_area_id")
+           .agg(mv=("market_value", "sum"), ac=("land_acres", "sum")).reset_index())
+    agg["value_per_acre"] = agg["mv"] / agg["ac"]
+
+    nb = gpd.read_file(nb_path)[["response_area_id", "RESPONSE_AREA_NAME", "urban_class",
+                                 "net_coverage_M", "net_demand_M"]]
+    inv = nb.merge(agg[["response_area_id", "value_per_acre"]], on="response_area_id", how="left")
+    inv = inv.sort_values("net_coverage_M", ascending=False).reset_index(drop=True)
+    inv.to_csv(OUT / "colloquial_inventory.csv", index=False)
+    print(f"wrote {(OUT/'colloquial_inventory.csv').relative_to(REPO)} ({len(inv)} areas)")
+
+    top = inv.head(n); bot = inv.tail(n).iloc[::-1]
+    vmax = float(np.nanpercentile(np.abs(inv["net_coverage_M"]), 98)) or 1.0
+    norm = matplotlib.colors.TwoSlopeNorm(vcenter=0, vmin=-vmax, vmax=vmax)
+
+    def _fmt(row):
+        vpa = f"${row['value_per_acre']/1e6:,.1f}M" if row["value_per_acre"] == row["value_per_acre"] else "—"
+        return [str(row["RESPONSE_AREA_NAME"])[:28], str(row["urban_class"]),
+                vpa, f"{row['net_coverage_M']:+.2f}"]
+
+    sections = [("TOP CONTRIBUTORS (coverage lens)", top), ("BIGGEST NET DRAINS (coverage lens)", bot)]
+    cells, rowcolors, headers = [], [], ["Response area", "Class", "Value / acre", "Net cover $M/yr"]
+    for title, df in sections:
+        cells.append([title, "", "", ""]); rowcolors.append(["section"] * 4)
+        for _, r in df.iterrows():
+            cells.append(_fmt(r)); rowcolors.append([None, None, None, r["net_coverage_M"]])
+
+    fig, ax = plt.subplots(figsize=(11, 0.4 * len(cells) + 1.0)); ax.axis("off")
+    ax.set_title("Ranked inventory — AFD response areas by value-per-acre & fire net balance",
+                 fontsize=13, color=vp.INK, pad=12)
+    tbl = ax.table(cellText=cells, colLabels=headers, loc="center", cellLoc="left")
+    tbl.auto_set_font_size(False); tbl.set_fontsize(8.5); tbl.scale(1, 1.5)
+    for (rr, cc), cell in tbl.get_celld().items():
+        cell.set_edgecolor("#d8d2c4")
+        if rr == 0:
+            cell.set_facecolor(vp.INK); cell.set_text_props(color="white", weight="bold"); continue
+        kind = rowcolors[rr - 1][cc]
+        if rowcolors[rr - 1][0] == "section":
+            cell.set_facecolor("#e8eef3"); cell.set_text_props(color=vp.INK, weight="bold")
+        elif cc == 3 and isinstance(kind, (int, float)):
+            cell.set_facecolor(matplotlib.colors.to_hex(DIV(norm(kind))))
+            cell.set_text_props(color="white" if abs(kind) > vmax * 0.45 else vp.INK, weight="bold")
+        else:
+            cell.set_facecolor("#fbfaf6")
+    tbl.auto_set_column_width(col=list(range(len(headers))))
+    _save(fig, "fig_colloquial_inventory.png")
+
+
 # ----------------------------------------------------------------- staged: data-derived charts
 def regen_data_charts():
-    """Regenerate fiscal_*/fire_* charts + colloquial inventory in the Austin palette.
-    Staged: only runs when the parcel parquet is present. See the report's
-    'Staged-run runbook'."""
+    """Build the parquet-dependent inventory. The fiscal_*/fire_* analysis charts are
+    produced by their source notebooks (`fiscal_productivity.ipynb`, `fire_use_vs_pays.ipynb`)
+    and embedded in §6; here we add the ranked colloquial inventory the report references."""
     if not METRO_PARQUET.exists():
-        print("[staged] parcels_value_per_acre_metro.parquet absent — skipping data-derived "
-              "charts (fiscal_land_vs_road, fire_apparatus_distance, fire_equity_scatter, "
-              "colloquial_inventory). Re-run this script once the parquet lands.")
+        print("[staged] parcels_value_per_acre_metro.parquet absent — skipping colloquial inventory. "
+              "Re-run this script once the parquet lands.")
         return
-    # When the parquet is present, re-run the chart builders from the analysis notebooks
-    # through viz_palette. Implemented as the staged step in the runbook; left as a clear
-    # extension point so the parquet-free path stays green.
-    print("[staged] parquet present — regenerate fiscal_/fire_ charts via the notebook builders.")
+    fig_colloquial_inventory()
 
 
 def main():

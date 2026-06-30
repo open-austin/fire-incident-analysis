@@ -267,7 +267,11 @@ The pattern is easier to trust when it is attached to places people recognize. T
 | **Kyle / Buda** | fast-growing outer suburbs | **net drains** — lots of pavement per dollar of value |
 | **San Marcos** | outer-metro college town | net drain on the road model; local square is a peak |
 
-*A ranked high/low table by exact value-per-acre and fire net balance regenerates from the parquet (`15_build_report_figures.py` colloquial-inventory step).*
+Below the named landmarks sits the **exact ranking** — the AFD response areas (by their operational zone code and urban class) that contribute and drain the most under the coverage lens, with each zone's measured value per acre. The pattern is unmistakable: the top contributors are high-value zones ($20–46M/acre), and every one of the biggest drains is a low-value outer/inner-suburban zone. The drains cluster near **−$0.93M** because that is the floor — a zone holding almost no taxable value still consumes one zone's share of standby (`1/285 × $264M`).
+
+![Ranked inventory — AFD response areas by value-per-acre and fire net balance (coverage lens)](../outputs/fig_colloquial_inventory.png)
+
+*Full 285-area ranking in `outputs/colloquial_inventory.csv`; regenerates from the parquet + `fire_net_balance.geojson` via `15_build_report_figures.py` (`fig_colloquial_inventory`).*
 
 ---
 
@@ -310,6 +314,7 @@ These are accuracy-of-magnitude caveats, not direction-of-finding caveats — wh
 | Fiscal: land vs road model | `outputs/fiscal_land_vs_road.png` | built (embedded §6.2) |
 | Fire: 3 models + distance | `outputs/fire_apparatus_distance.png` | built (embedded §6.3) |
 | Fire: net balance vs characteristics | `outputs/fire_equity_scatter.png` | built (embedded §6.3) |
+| Ranked colloquial inventory | `outputs/fig_colloquial_inventory.png` | built (embedded §7) |
 
 ![The Austin civic palette and how to read each scale](../outputs/fig_palette_swatch.png)
 
