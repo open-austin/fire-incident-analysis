@@ -8,17 +8,17 @@
 
 ---
 
-> **How to read this report.** This is a long, deliberately educational document. It is built so you can stop at any depth:
+> **How to read this.** It's long, so it's built to be read at whatever depth you have time for:
 >
-> | If you have… | Read |
+> | Time | Read |
 > |---|---|
-> | **2 minutes** | §1 Executive summary |
-> | **15 minutes** | §1, §2 Concepts primer, §6 Results |
-> | **the full sitting (~45 min)** | everything, including the methodology walk-throughs (§5) and appendices (§10–13) |
+> | **2 minutes** | §1 |
+> | **15 minutes** | §1, §2, §6 |
+> | **the whole thing (~45 min)** | everything, including the calculations (§5) and appendices (§10–13) |
 >
-> **Color is used as a signal, not decoration.** Throughout, the [Austin civic palette](#a-note-on-color) encodes meaning: a **sequential blue→amber scale** for *value per acre* (low → high), and a **diverging burnt-orange ↔ limestone ↔ bluebonnet scale** for *fire net balance* (net drain ← break-even → net contributor). The explainer diagrams, the map preview, the interactive map, and the validation table all share these two scales, so a color means the same thing everywhere. (The three analytical charts in §6.2–6.3 are reproduced from the analysis notebooks in their analysis-native scale; their captions state what each color means.)
+> The charts use two color keys — one for *value per acre*, one for *fire net balance*. You don't need to memorize them; the key is laid out in [§10](#a-note-on-color).
 >
-> **Every number is validated.** Section §11 reproduces a machine-generated reconciliation table. Headline figures carry footnotes that link to the exact line of code that computes them.
+> Every number here is checked against the source data. §11 is the reconciliation table, and the headline figures footnote the exact line of code that produces them.
 
 [TOC]
 
@@ -26,28 +26,28 @@
 
 ## 1 · Executive summary
 
-This report tests a single question three different ways: **does each area generate enough public revenue to pay for the infrastructure and services it consumes?** We measure it through (1) land value per acre, (2) road-infrastructure cost, and (3) fire-service cost — three independent datasets and methods.
+The question is simple: **can each part of the metro pay its own way?** Does it bring in enough public revenue to cover the infrastructure and services it uses? We test that three ways — land value per acre, road cost, and fire-service cost — each from a separate dataset.
 
-**Bottom line.** All three converge on the same answer: **fiscal productivity is governed by *value per unit of infrastructure*, not by the "city vs. suburb" label.** Dense, high-value land — and a handful of wealthy low-density enclaves — generate far more revenue than the infrastructure they occupy costs to build and serve. Low-value, low-density development — the broad unincorporated fringe and road-heavy growth suburbs — does not: it underpays for the roads it requires and the fire coverage it needs, and it is cross-subsidized by the dense core.
+The three lenses agree. What decides whether an area pays its way is its **value per unit of infrastructure** — not whether you call it a city or a suburb. Dense, high-value land, plus a few wealthy low-density enclaves, brings in far more than it costs to serve. Low-value, low-density development — the unincorporated fringe and the road-heavy growth suburbs — does not, and the dense core covers the gap.
 
-Because three unrelated measurements (property value, road-miles, fire standby) point the same direction, the conclusion is robust to the weaknesses of any one method.[^converge]
+Three unrelated measurements (property value, road-miles, fire standby) point the same way, so the finding doesn't rest on any one method.[^converge]
 
-The honest qualifier the data *also* show: it is **not** "suburb vs. city." Wealthy low-density enclaves (West Lake Hills, Lakeway, Rollingwood) pay their way precisely because their land value is high enough to clear the infrastructure bar. The subsidized party is the broad band of **low-value, low-density development** — much of it newer growth suburbs and unincorporated subdivision.
+It is not simply suburb-versus-city. West Lake Hills, Lakeway, and Rollingwood pay their way because their land is valuable enough to clear the bar, even at low density. The areas that fall short are the broad band of **low-value, low-density development** — much of it newer growth suburbs and unincorporated subdivision.
 
 [^converge]: The convergence argument is developed in full in [§8](#8--why-the-data-support-the-conclusion). A bias in any single method (e.g. the blended tax rate, the uniform-cost assumption) cannot explain agreement across three different agencies, units, and methods.
 
 ---
 
-## 2 · Concepts primer — every idea, in plain English
+## 2 · Key concepts
 
-This section defines each financial and operational concept the report relies on. Each comes with a picture and a one-line plain-English gloss. The full [glossary](#12--glossary) at the end defines every term.
+A short definition of each idea the report uses, with a picture. The full [glossary](#12--glossary) at the end covers every term.
 
 ### 2.1 Land value, and market vs. assessed/appraised value
 
 - **Market value** — what an appraisal district estimates a property would sell for. This is the figure we use for revenue, because property tax is levied against value.
 - **Appraised / assessed value** — market value after caps and exemptions (e.g. the 10% homestead cap). Taxes are actually levied on this; we use it for the tax-per-acre lens and market value for the value lens.
 
-> *In plain English: "value" here is the appraisal district's estimate of what land + buildings are worth — the thing the tax rate is multiplied against.*
+So "value" throughout is the appraisal district's estimate of what the land and buildings are worth — the number the tax rate gets multiplied against.
 
 ### 2.2 Value per acre
 
@@ -55,7 +55,7 @@ The central idea, borrowed from the Strong Towns / Urban3 framing: **public infr
 
 ![Two parcels of identical size produce vastly different revenue per acre](../outputs/fig_concept_value_per_acre.png)
 
-> *In plain English: two parcels can occupy the same acre of land — needing the same road, pipe, and coverage — yet one generates 80× the tax. Value per acre is how we see that.*
+Two parcels can sit on the same acre — same road, same pipe, same area to cover — yet one brings in 80× the tax. Value per acre is what makes that visible.
 
 ### 2.3 Effective tax rate
 
@@ -69,7 +69,7 @@ An area **breaks even** when its revenue equals its cost-to-serve. Above the lin
 
 ![Revenue rises with value; cost-to-serve is roughly flat per acre — they cross at the break-even value per acre](../outputs/fig_concept_breakeven.png)
 
-> *In plain English: draw a line for what an area pays in and a line for what it costs to serve. Where they cross is break-even. The interesting question is who sits above and who sits below.*
+Plot what an area pays in against what it costs to serve. Where the two lines cross is break-even. The whole report is really about who sits above that line and who sits below.
 
 ### 2.5 Fire coverage vs. fire demand
 
@@ -80,7 +80,7 @@ A fire department's cost is mostly **standby**, not response. Roughly **90%** of
 
 ![Call volume falls with density, but staffed standby stays roughly fixed per zone](../outputs/fig_concept_coverage_demand.png)
 
-> *In plain English: a quiet outer zone still needs a fire station able to reach it fast. Most of the cost is being ready, not running calls — so "who uses the most" depends entirely on which lens you pick.*
+A quiet outer zone still needs a station that can reach it in time. Most of the cost is being ready, not running calls — so which area "uses the most" depends entirely on which lens you pick.
 
 ### 2.6 Apparatus weighting
 
@@ -105,9 +105,11 @@ The analysis draws on three groups of sources, feeding three models, producing t
 
 ## 4 · Data sources — deep dive
 
-For each source: *what the agency is, what the dataset is, its vintage, and why it is the authoritative source.*
+For each source: what the agency is, what the dataset is, its vintage, why it's the authoritative source, and what we use it for.
 
 ### 4.1 Property & value (Group A)
+
+**What we use it for:** every dollar figure in the report — the value-per-acre map, the fiscal break-even (both cost models), and each area's fire pays-in. Without it there is no revenue side to the ledger.
 
 | Source | Agency | What it is | Records | Vintage | Why authoritative |
 |---|---|---|---|---|---|
@@ -121,6 +123,8 @@ For each source: *what the agency is, what the dataset is, its vintage, and why 
 
 ### 4.2 Fire operations (Group B)
 
+**What we use it for:** the fire model — which areas generate calls (demand), where the stations actually are (coverage and distance), and the response-area zones we balance "use" against "pays-in."
+
 | Source | Agency | What it is | Records | Vintage | Why authoritative |
 |---|---|---|---|---|---|
 | **Fire incidents** | **Austin Fire Department**, via the [Austin Open Data Portal](https://data.austintexas.gov/Public-Safety/AFD-Fire-Incidents-2022-2024/v5hh-nyr8) | Per-incident type, response area, location — enriched here with parcel + tract | 20,920 | 2022–2024 | AFD is the dispatching authority; this is its own operational record of every fire call. |
@@ -128,6 +132,8 @@ For each source: *what the agency is, what the dataset is, its vintage, and why 
 | **Response areas** | City of Austin `BOUNDARIES_afd_response_areas` ArcGIS FeatureServer | First-due operational zones | 765 (285 served) | current | The operational unit AFD itself uses to assign first-due companies. |
 
 ### 4.3 Geography & infrastructure (Group C)
+
+**What we use it for:** the road-cost model (Model B) needs the road network; the city boundaries put each parcel in the right jurisdiction; the Census demographics supply the density and housing-age context.
 
 | Source | Agency | What it is | Vintage | Why authoritative |
 |---|---|---|---|---|
@@ -137,9 +143,9 @@ For each source: *what the agency is, what the dataset is, its vintage, and why 
 
 ---
 
-## 5 · Methodology with formula walk-throughs
+## 5 · Calculations and methodology
 
-Every formula is written out with a worked numeric example and a footnote linking to the exact code.
+Every formula is written out, with a worked example and a footnote pointing to the exact code that runs it.
 
 ### 5.1 Value per acre
 
@@ -205,23 +211,42 @@ The **apparatus-weighted** coverage lens scales each zone's `coverage_share` by 
 
 ### 6.1 Value per acre — the Urban3 pattern holds
 
-Across **724,639 metro parcels**, value per acre spans four orders of magnitude. Downtown Austin H3 hexes top the metro at **$17–43 million per acre**; suburban old-town cores (Georgetown Square, Round Rock, San Marcos) register as local peaks well above their surroundings; the rural fringe and big-lot tracts bottom the distribution. Top parcels by value/acre are downtown high-rise office, condo, and hotel; the bottom are large low-value and undeveloped tracts — exactly the textbook result.
+Across **724,639 metro parcels**, value per acre spans four orders of magnitude. Downtown Austin H3 hexes top the metro at **$17–43 million per acre**; the old-town cores of the suburbs (Georgetown Square, Round Rock, San Marcos) stand out as local peaks above their surroundings; the rural fringe and big-lot tracts sit at the bottom. The highest value-per-acre parcels are downtown high-rise office, condos, and hotels; the lowest are large, low-value or undeveloped tracts.
 
-*The value-per-acre surface is best read interactively: it is the extruded "Value per acre (3D)" layer in the companion `outputs/fire_fiscal_interactive_map.html` (and visible in the [§7 map preview](#7--colloquial-inventory--places-you-know)). It regenerates from `parcels_value_per_acre_metro.parquet` via `notebooks/value_per_acre_metro.ipynb`.*
+*The value-per-acre surface is best read interactively: it is the extruded "Value per acre (3D)" layer in the companion `outputs/fire_fiscal_interactive_map.html` (and visible in the [§7 map preview](#7--places-you-know)). It regenerates from `parcels_value_per_acre_metro.parquet` via `notebooks/value_per_acre_metro.ipynb`.*
 
 ### 6.2 Fiscal productivity — the cost model changes the verdict
 
-Under **Model A** (cost ∝ acres), the deciding variable is land value: Austin and the wealthy enclaves clear break-even; the largest deficit is rural/unincorporated land. Under **Model B** (cost ∝ road-miles — the defensible model), the picture **sharpens and 11 cities change verdict**. The deciding variable becomes *value per road-mile*:
+Model A charges every area by its land area; Model B charges by the local road-miles it actually carries. Model B is the better proxy, because public infrastructure cost follows linear feet of road and pipe more closely than raw acreage. Switching from A to B sharpens the picture and **flips the verdict for 11 cities** — the deciding variable becomes value per road-mile.
 
-- **Road-heavy growth suburbs flip to net drains:** Kyle, Buda, Georgetown, and San Marcos all move below break-even.
-- **Big-lot, high-value enclaves strengthen:** West Lake Hills, Bee Cave, and Lakeway gain — few road-miles, high value.
-- **The unincorporated-county deficit (~−$2 billion/yr) persists under both models** — confirming it is genuinely road-heavy, lower-value subdivision, not an artifact of assuming uniform per-acre cost.
+The cities that change verdict sort cleanly by home value. The ones that flip to net drains are the modest-value, road-heavy growth suburbs; the ones that strengthen are the high-value places with few road-miles per dollar of value:
+
+| City | Median home value | Under the road-cost model |
+|---|---|---|
+| West Lake Hills | ~$1.69M | strengthens — high value, few road-miles |
+| Bee Cave | ~$850k | strengthens |
+| Lakeway | ~$750k | strengthens |
+| *Austin (reference)* | ~$500k | clears break-even |
+| Buda | ~$400k | flips to net drain |
+| Georgetown | ~$380k | flips to net drain |
+| San Marcos | ~$330k | flips to net drain |
+| Kyle | ~$315k | flips to net drain |
+
+The unincorporated county runs a deficit of about **−$2 billion/yr under both models**, so that gap is genuinely road-heavy, lower-value subdivision — not an artifact of how Model A assumes cost.
 
 ![Fiscal productivity by city — land-cost (Model A) vs road-cost (Model B); 11 cities change verdict](../outputs/fiscal_land_vs_road.png)
 
+*Median home value = the median market value of residential-sized parcels (0.05–1.5 acres) in each city, computed from the parcel roll (`parcels_value_per_acre_metro.parquet`).*
+
 ### 6.3 Fire service — the same shape, with consumption data
 
-Across 285 served AFD response areas ($263B property value, 20,920 fire calls), the two cost lenses tell opposite stories — and that contrast *is* the finding:
+This breaks the 285 served AFD response areas ($263B property value, 20,920 fire calls) into three area types by density:
+
+- **Urban core** — the dense central-city zones (downtown and the older grid).
+- **Inner suburban** — the established neighborhoods ringing the core: moderate density, mostly older housing.
+- **Outer suburban** — the spread-out, newer edge: large lots, long roads, low density.
+
+Depending on which cost lens you use, two of those three switch sign — and that switch is the whole point:
 
 | Area type | Demand (cost ∝ calls) | Coverage flat | Coverage apparatus-wtd |
 |---|---|---|---|
@@ -229,10 +254,12 @@ Across 285 served AFD response areas ($263B property value, 20,920 fire calls), 
 | Outer suburban | +$21M (contributes) | −$51M | **−$33M** |
 | Urban core | +$2M | +$8M | +$4M |
 
-- **Demand lens:** busy older inner areas generate the most calls, so they appear to "use" the most.
-- **Coverage lens** (the realistic one): it **flips** — every spread-out outer-suburban zone still needs a staffed station, but holds roughly half the taxable value per zone, so **low-density outer development is the net drain on fire coverage.**
-- **Apparatus-weighting moderates but does not overturn it** — outer suburbs are mostly single-engine houses; inner areas carry the costly ladder/quint companies. Direction holds.
-- **Distance confirms a double penalty:** outer-suburban zones sit a median **1.2 miles** from the nearest station vs. **0.8** inner (worst cases >5 miles) — costlier to cover *and* slower-served.
+- **Demand lens:** busy older inner areas generate the most calls, so they look like they "use" the most.
+- **Coverage lens:** this is the lens that matches how a fire budget actually works — about 90% of it is the fixed cost of keeping a staffed company ready, not running calls. On that basis the result **flips**: every spread-out outer-suburban zone still needs its own staffed station but holds only about half the taxable value per zone, so **low-density outer development is the net drain on fire coverage**.
+- **Apparatus-weighting** softens the gap but doesn't close it — outer suburbs are mostly single-engine houses, while inner areas carry the costly ladder/quint companies. The direction holds.
+- **Distance** adds a second penalty: outer-suburban zones sit a median **1.2 miles** from the nearest station versus **0.8** for inner ones (worst cases over 5 miles) — costlier to cover *and* slower to reach.
+
+You can see this zone by zone on the map in [§7](#7--places-you-know), and interactively in the companion `fire_fiscal_interactive_map.html`.
 
 ![Fire: three cost models (demand, coverage, apparatus-weighted) and coverage stretch (distance to nearest station)](../outputs/fire_apparatus_distance.png)
 
@@ -248,9 +275,9 @@ To read the fire dollars correctly, it helps to see AFD inside the whole City of
 
 ---
 
-## 7 · Colloquial inventory — places you know
+## 7 · Places you know
 
-The pattern is easier to trust when it is attached to places people recognize. The companion **[interactive 3D map](../outputs/fire_fiscal_interactive_map.html)** lets you toggle four layers — value-per-acre (extruded), fire net balance, fire stations, and these landmark pins — and click any zone for its value, pays-in, and net.
+The numbers are easier to trust against places you can actually picture. The companion **[interactive 3D map](../outputs/fire_fiscal_interactive_map.html)** lets you toggle four layers — value-per-acre (extruded), fire net balance, fire stations, and these landmark pins — and click any zone for its value, pays-in, and net.
 
 ![Static preview of the interactive 3D map — response-area choropleth with colloquial landmark pins (bluebonnet = high value / contributor, burnt-orange = net drain)](../outputs/fig_interactive_map_preview.png)
 
@@ -277,13 +304,13 @@ Below the named landmarks sits the **exact ranking** — the AFD response areas 
 
 ## 8 · Why the data support the conclusion
 
-The strength of the finding is **convergence across three independent measurements**:
+The finding holds because three independent measurements point the same way:
 
-1. **Property value per acre** — from appraisal rolls — shows low-density land underproduces value (hence tax).
-2. **Road-miles** — from the federal road network — shows low-density land requires more pavement per dollar of value.
-3. **Fire incidents + station standby** — from operational dispatch and facility data — shows low-density land requires more fire coverage capacity (and is farther from it) per dollar of value.
+1. **Property value per acre** — from appraisal rolls — shows low-density land produces less value (and so less tax) per acre.
+2. **Road-miles** — from the federal road network — shows low-density land needs more pavement per dollar of value.
+3. **Fire incidents + station standby** — from dispatch and facility data — shows low-density land needs more fire coverage per dollar of value, and sits farther from it.
 
-These use **different source agencies, different units, and different methods**, yet point the same direction. A bias in any one (e.g. the blended tax rate, the uniform-cost assumption) cannot explain agreement across all three. Two deliberate robustness checks reinforce this: the fiscal result survives swapping the cost basis from acres to road-miles, and the fire result survives swapping flat-per-zone standby for apparatus-weighted standby. In both cases the *magnitude* softens but the *direction* is unchanged.
+These come from **different agencies, in different units, by different methods**, yet they agree. A bias in any one — the blended tax rate, say, or the uniform-cost assumption — can't explain why all three line up. Two checks back this up: the fiscal result survives swapping the cost basis from acres to road-miles, and the fire result survives swapping flat-per-zone standby for apparatus-weighted standby. Each time the size of the gap changes; the direction doesn't.
 
 ---
 
@@ -295,7 +322,7 @@ These use **different source agencies, different units, and different methods**,
 - **Infrastructure proxy.** Road-miles omit water/sewer line-miles and service frequency; apparatus weighting omits crew-shift detail. Coverage cost allocated per first-due zone.
 - **Vintage mix.** Travis values are 2025 certified; Williamson/Hays are their current published cycle. All ~2025; not identically dated.
 
-These are accuracy-of-magnitude caveats, not direction-of-finding caveats — which is why the convergence argument carries the conclusion.
+Each of these affects how big the numbers are, not which way they point — which is why the three-way agreement still carries the conclusion.
 
 ---
 
@@ -314,13 +341,15 @@ These are accuracy-of-magnitude caveats, not direction-of-finding caveats — wh
 | Fiscal: land vs road model | `outputs/fiscal_land_vs_road.png` | built (embedded §6.2) |
 | Fire: 3 models + distance | `outputs/fire_apparatus_distance.png` | built (embedded §6.3) |
 | Fire: net balance vs characteristics | `outputs/fire_equity_scatter.png` | built (embedded §6.3) |
-| Ranked colloquial inventory | `outputs/fig_colloquial_inventory.png` | built (embedded §7) |
+| Ranked inventory by zone | `outputs/fig_colloquial_inventory.png` | built (embedded §7) |
 
 ![The Austin civic palette and how to read each scale](../outputs/fig_palette_swatch.png)
 
-#### A note on color
+#### The color key
 
-The two scales above are the color language of this report's purpose-built figures. The **sequential** scale (`#1d3557 → #457b9d → #a8dadc → #e9c46a → #bc6c25`) always means *value per acre, low → high*. The **diverging** scale (burnt-orange `#9c4221` ↔ limestone `#efe9dd` ↔ bluebonnet `#2a6f97`) always means *fire net balance*, centered at break-even. They are defined once in `viz_palette.py` and reused by the explainer diagrams, the map preview, and the interactive 3D map, so a color carries the same meaning across all of them. The three analytical charts (§6.2–6.3) are reproduced directly from the analysis notebooks and keep their analysis-native coloring, labeled in each caption.
+Two scales do all the work. The **sequential** one (`#1d3557 → #457b9d → #a8dadc → #e9c46a → #bc6c25`) means *value per acre, low → high*. The **diverging** one (burnt-orange `#9c4221` ↔ limestone `#efe9dd` ↔ bluebonnet `#2a6f97`) means *fire net balance*, centered on break-even. Both are defined once in `viz_palette.py` and reused by the explainer diagrams, the map preview, and the interactive map, so a color means the same thing wherever you see it. The three analytical charts in §6.2–6.3 come straight from the analysis notebooks and keep their own coloring, spelled out in each caption.
+
+Color is a shortcut, not the only signal: the two ends of the diverging scale can be hard to tell apart in print or for colorblind readers, so every chart and table also carries the actual numbers. (A grayscale-legible version of the map is in the Kindle/e-ink build.)
 
 ---
 
