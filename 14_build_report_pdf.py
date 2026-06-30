@@ -2,18 +2,24 @@
 """Render docs/FIRE_FISCAL_FULL_REPORT.md -> a styled PDF via Chrome headless.
 
 No LaTeX/pandoc needed: markdown -> HTML (figures inlined as base64) -> Chrome --print-to-pdf.
-    python 14_build_report_pdf.py [docs/SOME_OTHER.md]
-Outputs outputs/<doc-stem>.{html,pdf}. Requires the `markdown` package
-(pip install markdown) and a Chromium/Chrome binary.
+    python 14_build_report_pdf.py [docs/SOME_OTHER.md] [--scribe]
+Outputs outputs/<doc-stem>.{html,pdf}. With --scribe, emits a <stem>_scribe.pdf
+sized to the Kindle Scribe's native 6.2 x 8.27 in (1860x2480 @ 300 ppi) screen with
+larger body type and slim margins, so text renders 1:1 and large on the e-ink panel.
+Requires the `markdown` package (pip install markdown) and a Chromium/Chrome binary.
 """
 import base64, re, shutil, subprocess, sys
 from pathlib import Path
 import markdown
 
+SCRIBE = "--scribe" in sys.argv
+args = [a for a in sys.argv[1:] if not a.startswith("--")]
+
 REPO = Path(__file__).resolve().parent
-MD = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else REPO / "docs" / "FIRE_FISCAL_FULL_REPORT.md"
-HTML = REPO / "outputs" / f"{MD.stem}.html"
-PDF = REPO / "outputs" / f"{MD.stem}.pdf"
+MD = Path(args[0]).resolve() if args else REPO / "docs" / "FIRE_FISCAL_FULL_REPORT.md"
+_suffix = "_scribe" if SCRIBE else ""
+HTML = REPO / "outputs" / f"{MD.stem}{_suffix}.html"
+PDF = REPO / "outputs" / f"{MD.stem}{_suffix}.pdf"
 
 CHROME = next((p for p in [
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
@@ -55,6 +61,42 @@ strong { color:#1d3557; }
 sup a, a.footnote-ref { color:#9c4221; text-decoration:none; font-weight:600; }
 """
 
+# Kindle Scribe: 6.2 x 8.27 in panel @ 300 ppi. Page == screen so type renders 1:1;
+# slim margins + larger body font for comfortable e-ink reading. Figures capped to fit
+# one screen with surrounding text.
+SCRIBE_CSS = """
+@page { size: 6.2in 8.27in; margin: 0.42in 0.4in; }
+* { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { font-family: -apple-system,'Helvetica Neue',Arial,sans-serif; font-size:12pt; line-height:1.55; color:#111; }
+h1 { font-size:23pt; line-height:1.18; margin:0 0 4px; color:#1d3557; }
+h2 { font-size:16pt; color:#1d3557; border-bottom:2px solid #d8d2c4; padding-bottom:3px; margin-top:20px; page-break-after:avoid; }
+h3 { font-size:13pt; color:#2a4a63; margin-top:15px; }
+h4 { font-size:12pt; color:#2a4a63; margin:11px 0 4px; }
+hr { border:none; border-top:1px solid #d8d2c4; margin:13px 0; }
+blockquote { border-left:4px solid #457b9d; background:#f6f4ee; margin:11px 0; padding:8px 13px; color:#2a4a63; }
+blockquote em { color:#9c4221; font-style:italic; }
+table { border-collapse:collapse; width:100%; margin:11px 0; font-size:10pt; }
+th,td { border:1px solid #c8ccd0; padding:5px 7px; text-align:left; vertical-align:top; }
+th { background:#e8eef3; color:#1d3557; font-weight:600; }
+tr:nth-child(even) td { background:#fafbfc; }
+figure { margin:13px 0; text-align:center; page-break-inside:avoid; }
+figure img { max-width:100%; max-height:5.6in; width:auto; border:1px solid #e0e4e8; border-radius:3px; }
+figcaption { font-size:9.5pt; color:#555; font-style:italic; margin-top:4px; }
+code { background:#f0efe9; padding:1px 4px; border-radius:3px; font-size:10pt; color:#9c4221; }
+pre { background:#1d3557; color:#eef2f6; padding:10px 12px; border-radius:5px; overflow-x:auto;
+      font-size:9.4pt; line-height:1.42; page-break-inside:avoid; white-space:pre-wrap; }
+pre code { background:none; color:#eef2f6; padding:0; font-size:9.4pt; }
+strong { color:#1d3557; }
+.toc { background:#f6f4ee; border:1px solid #d8d2c4; border-radius:6px; padding:10px 14px 10px 26px; font-size:11pt; }
+.toc ul { margin:2px 0; padding-left:15px; }
+.toc > ul { padding-left:5px; }
+.toc a { color:#2a4a63; text-decoration:none; }
+.footnote { font-size:9.8pt; color:#333; border-top:1px solid #d8d2c4; margin-top:18px; padding-top:6px; }
+.footnote ol { padding-left:18px; }
+.footnote li { margin:2px 0; }
+sup a, a.footnote-ref { color:#9c4221; text-decoration:none; font-weight:600; }
+"""
+
 
 def embed(m):
     alt, src = m.group(1), m.group(2)
@@ -68,10 +110,18 @@ def embed(m):
 def main():
     if CHROME is None:
         sys.exit("No Chromium/Chrome found — install it or adjust CHROME path.")
-    text = re.sub(r'!\[([^\]]*)\]\(([^)]+)\)', embed, MD.read_text())
+    raw = MD.read_text()
+    if SCRIBE:
+        # On the grayscale e-ink panel the diverging map collapses (both signs go dark);
+        # swap in the luminance-monotonic variant (dark=drain -> light=contributor).
+        raw = raw.replace("fig_interactive_map_preview.png", "fig_interactive_map_preview_gray.png")
+        raw = raw.replace("bluebonnet = high value / contributor, burnt-orange = net drain",
+                          "grayscale: dark = net drain, light = net contributor")
+    text = re.sub(r'!\[([^\]]*)\]\(([^)]+)\)', embed, raw)
     body = markdown.markdown(text, extensions=[
         "tables", "fenced_code", "attr_list", "footnotes", "toc"])
-    HTML.write_text(f"<!DOCTYPE html><html><head><meta charset='utf-8'><style>{CSS}</style></head><body>{body}</body></html>")
+    css = SCRIBE_CSS if SCRIBE else CSS
+    HTML.write_text(f"<!DOCTYPE html><html><head><meta charset='utf-8'><style>{css}</style></head><body>{body}</body></html>")
     subprocess.run([CHROME, "--headless=new", "--no-sandbox", "--disable-gpu",
                     "--no-pdf-header-footer", f"--print-to-pdf={PDF}", HTML.as_uri()],
                    check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

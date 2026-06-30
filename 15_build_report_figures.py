@@ -214,10 +214,15 @@ def fig_afd_vs_city_budget():
 
 
 # ----------------------------------------------------------------- 7. interactive-map static preview
-def fig_interactive_map_preview():
+def fig_interactive_map_preview(gray_safe=False):
     """Static, print-ready preview of the interactive 3D map: response-area choropleth
-    coloured by fire net balance (DIV palette, 0-centred) with colloquial landmark pins.
-    Builds when response_areas_final.geojson + fire_net_balance.geojson are present."""
+    coloured by fire net balance with colloquial landmark pins. Builds when
+    response_areas_final.geojson + fire_net_balance.geojson are present.
+
+    gray_safe=True renders a luminance-monotonic version (cividis: dark=drain →
+    light=contributor) so it stays legible on a grayscale e-ink panel, where the
+    standard burnt-orange↔bluebonnet diverging scale collapses (both ends go dark).
+    Writes fig_interactive_map_preview_gray.png for the Kindle Scribe edition."""
     import geopandas as gpd
     import matplotlib.patheffects as pe
     ra_path = PROC / "response_areas_final.geojson"
@@ -231,6 +236,10 @@ def fig_interactive_map_preview():
     served = gdf[gdf["net_coverage_M"].notna()].copy()
     vmax = float(np.nanpercentile(np.abs(served["net_coverage_M"]), 98)) or 1.0
     norm = matplotlib.colors.TwoSlopeNorm(vcenter=0, vmin=-vmax, vmax=vmax)
+    cmap = matplotlib.colormaps["cividis"] if gray_safe else DIV
+    cb_note = ("dark = net drain   ·   light = contributor" if gray_safe
+               else "burnt-orange = net drain   ·   bluebonnet = contributor")
+    outname = "fig_interactive_map_preview_gray.png" if gray_safe else "fig_interactive_map_preview.png"
 
     LANDMARKS = [
         ("Downtown", -97.7431, 30.2672, "hi"), ("The Domain", -97.7261, 30.4007, "hi"),
@@ -244,23 +253,22 @@ def fig_interactive_map_preview():
 
     fig, ax = plt.subplots(figsize=(9, 9.6))
     gdf.plot(ax=ax, color="#eceae2", edgecolor="#d8d2c4", linewidth=0.2, zorder=1)
-    served.plot(ax=ax, column="net_coverage_M", cmap=DIV, norm=norm,
+    served.plot(ax=ax, column="net_coverage_M", cmap=cmap, norm=norm,
                 edgecolor="#9a958a", linewidth=0.25, zorder=2)
     for name, lon, lat, kind in LANDMARKS:
         ax.scatter(lon, lat, s=64, color=pin[kind], edgecolor="white", linewidth=1.3, zorder=4)
         ax.annotate(name, (lon, lat), xytext=(5, 3), textcoords="offset points",
                     fontsize=8, fontweight="bold", color=vp.INK, zorder=5,
                     path_effects=[pe.withStroke(linewidth=2.2, foreground="white")])
-    sm = plt.cm.ScalarMappable(cmap=DIV, norm=norm)
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     cb = fig.colorbar(sm, ax=ax, fraction=0.036, pad=0.02, shrink=0.62)
-    cb.set_label("fire net balance — coverage lens ($M/yr)\n"
-                 "burnt-orange = net drain   ·   bluebonnet = contributor", fontsize=8)
+    cb.set_label(f"fire net balance — coverage lens ($M/yr)\n{cb_note}", fontsize=8)
     ax.set_title("Fire net balance by AFD response area, with colloquial landmarks\n"
                  "(static preview of the interactive 3D map)", fontsize=12, color=vp.INK)
     ax.set_xlabel("longitude"); ax.set_ylabel("latitude")
     ax.set_xlim(served.total_bounds[0] - 0.05, served.total_bounds[2] + 0.20)
     ax.set_ylim(served.total_bounds[1] - 0.05, served.total_bounds[3] + 0.05)
-    _save(fig, "fig_interactive_map_preview.png")
+    _save(fig, outname)
 
 
 # ----------------------------------------------------------------- 8. ranked colloquial inventory
@@ -350,6 +358,7 @@ def main():
     fig_palette_swatch()
     fig_afd_vs_city_budget()
     fig_interactive_map_preview()
+    fig_interactive_map_preview(gray_safe=True)   # grayscale-legible variant for the Scribe edition
     regen_data_charts()
     print("done.")
 
