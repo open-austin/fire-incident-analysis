@@ -34,3 +34,4 @@ processed_data/tcad_2025_values.parquet
 processed_data/roads_48453.zip
 processed_data/roads_48491.zip
 processed_data/roads_48209.zip
+processed_data/fire_stations.geojson
