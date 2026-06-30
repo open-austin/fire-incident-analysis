@@ -28,11 +28,15 @@ def _query(url, params):
 
 
 def fetch_county_records(county, limit=None, page_size=2000,
-                         only_valued=True, with_geometry=True):
+                         only_valued=True, with_geometry=True, bbox=None):
     """Paginated fetch of one county's parcels, normalized to the canonical schema.
 
     Returns a list of dicts: canonical attribute keys + 'county' + (optional)
     'geometry' (GeoJSON geometry). Stdlib only — no geopandas/requests.
+
+    bbox: optional (xmin, ymin, xmax, ymax) in lon/lat (EPSG:4326). When given,
+    only parcels intersecting that envelope are returned — used for fast,
+    geographically-bounded slices (e.g. downtown) before a full-county pull.
     """
     cfg = COUNTY_SOURCES[county]
     field_map = cfg["field_map"]            # {canonical: native}
@@ -55,6 +59,14 @@ def fetch_county_records(county, limit=None, page_size=2000,
             "resultRecordCount": page_size,
             "returnGeometry": "true" if with_geometry else "false",
         }
+        if bbox is not None:
+            xmin, ymin, xmax, ymax = bbox
+            params.update({
+                "geometry": f"{xmin},{ymin},{xmax},{ymax}",
+                "geometryType": "esriGeometryEnvelope",
+                "inSR": "4326",
+                "spatialRel": "esriSpatialRelIntersects",
+            })
         data = _query(cfg["url"], params)
         feats = data.get("features", [])
         if not feats:
@@ -104,7 +116,8 @@ def fetch_county_gdf(county, **kwargs):
     import geopandas as gpd
     from shapely.geometry import shape
 
-    recs = fetch_county_records(county, with_geometry=True, **kwargs)
+    kwargs.setdefault("with_geometry", True)
+    recs = fetch_county_records(county, **kwargs)
     for r in recs:
         r["geometry"] = shape(r["geometry"]) if r.get("geometry") else None
     return gpd.GeoDataFrame(recs, geometry="geometry", crs="EPSG:4326")
