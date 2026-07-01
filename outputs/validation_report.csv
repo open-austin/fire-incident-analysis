@@ -1,0 +1,25 @@
+check,expected,measured,source,status
+Fire incident count,20920,20920,incidents_enriched.csv,PASS
+Weighted incidents (sum of WEIGHTS),65166,65166,WEIGHTS x incidents_enriched.csv,PASS
+AFD response areas (total),765,765,response_areas_final.geojson,PASS
+Negative MARKET_VALUE / LAND_ACRES,0,0,incidents_enriched.csv,PASS
+Incident categories all weighted,[],[],WEIGHTS,PASS
+City of Austin total budget FY24-25,$5.9B,as cited,"citation log — Austin City Council adoption, Aug 2024 (KUT / City Budget Office)",PASS
+City General Fund FY24-25,$1.4B,as cited,"citation log — City of Austin Approved Budget FY24-25 ($1,404.5M base)",PASS
+Public-safety share of General Fund,64.8%,as cited,citation log — City of Austin budget (Police+Fire+EMS+Forensics),PASS
+AFD budget (scales fire $ only),~$264M,$264M (within range),citation log — consistent w/ $1.4B GF x public-safety share; AFD 2nd-largest GF dept,PASS
+Blended effective property-tax rate,~2.1%,~2.1% (within range),citation log — City+Travis/Williamson/Hays+AISD+ACC+districts combined effective rate,PASS
+Metro parcel count,724639,724639,metro parquet,PASS
+Total market value,$597.9B,$597.9B,metro parquet,PASS
+Revenue = sum(market x 0.021),$12.56B,$12.56B,metro parquet,PASS
+All-land break-even $/acre,8421,8421,metro parquet,PASS
+Parcels with null/neg value or acres,0,0,metro parquet,PASS
+"Net-balance conservation (shares sum=1, net sum~0)",~0,1.11e-16,recomputed,PASS
+Served response areas,285,285,metro parquet ∩ incidents,PASS
+Fire calls within served areas,20136,20136,incidents ∩ served areas,PASS
+§6.3 class table (demand/coverage $M),inner −22/+45; outer +21/−51; core +2/+8,inner_suburban -22/+45; outer_suburban +21/-51; urban_core +2/+8,recomputed from net-balance join,PASS
+"Median distance to station (outer/inner, mi)",1.2 / 0.8,1.23 / 0.79,"recomputed (sjoin_nearest, EPSG:2277)",PASS
+§6.2 verdict flips (model A → B),11,11,city_fiscal_verdicts.csv,PASS
+San Marcos verdict,net drain under both,net drain under both,city_fiscal_verdicts.csv,PASS
+West Lake Hills median home value,~$1.74M,$1.74M,city_fiscal_verdicts.csv,PASS
+AFD fire stations,64,64,fire_stations.geojson,PASS

@@ -1,5 +1,7 @@
 # Who Pays for Growth? Value, Infrastructure, and Fire Service Across the Austin Metro
 
+> **Superseded.** This standalone write-up has been folded into the master report: see [FIRE_FISCAL_FULL_REPORT.md](FIRE_FISCAL_FULL_REPORT.md).
+
 **Prepared by:** Austin Housing & Land Use Working Group — Research Hub
 **Date:** June 2026
 **Analysis vintage:** 2025 appraisal values · 2022–2024 fire incidents

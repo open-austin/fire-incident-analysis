@@ -61,7 +61,7 @@ Two parcels can sit on the same acre — same road, same pipe, same area to cove
 
 Revenue is `value × an effective tax rate`. The **effective** rate blends every overlapping jurisdiction — City of Austin, the county, the school district (AISD), the community college (ACC), and special districts — into one number applied to market value. We use a blended **~2.1%**.[^rate] A uniform rate **cancels** in any relative (above/below average) comparison, so the *pattern* does not depend on getting the rate exactly right — only the absolute dollars do.
 
-[^rate]: `EFFECTIVE_TAX_RATE = 0.021` is defined once at `13_build_metro_parcels.py:22` and reused everywhere. Validated against published City/county/AISD/ACC rates — see [§11](#11--validation-appendix).
+[^rate]: `EFFECTIVE_TAX_RATE = 0.021` is defined once at `report_pipeline/13_build_metro_parcels.py:22` and reused everywhere. Validated against published City/county/AISD/ACC rates — see [§11](#11--validation-appendix).
 
 ### 2.4 Fiscal productivity & break-even
 
@@ -120,8 +120,8 @@ For each source: what the agency is, what the dataset is, its vintage, why it's 
 | **Hays parcels** | **Hays CAD** ArcGIS FeatureServer (`countygis.DBO.Parcels`) | Parcels with `market`, `land_val`, `imprv_val`, `legal_acreage` | 85,662 | current cycle | Hays CAD is the statutory appraiser for Hays County. |
 | **Cross-county comparability** | **Texas Comptroller** Property Value Study / Appraisal District Ratio Study | Median appraisal-to-sale ratio, Category A | — | 2022–2024 ADRS | The Comptroller independently audits each district's level of appraisal; we divide by these ratios so a dollar of "market value" means the same across counties.[^pvs] |
 
-[^tcad]: **Provenance note.** Travis per-property values are withheld from the statewide StratMap dataset and gated behind the appraisal-district web portal, but the **full certified roll is published free** as a fixed-width PACS export; we parse it directly with `12_parse_tcad_roll.py`. The roll re-certifies every mid-July (Tex. Property Tax Code §26.01), so the pipeline refreshes to a newer year by re-running one parser on the new `PROP.TXT`.
-[^pvs]: `PVS_RATIOS = {travis 1.00, williamson 0.96, hays 0.97}` with the per-county ADRS citations in `v2_county_sources.py`. Applied as `value_per_acre_adj = (market_value / pvs_ratio) / land_acres` at `13_build_metro_parcels.py`.
+[^tcad]: **Provenance note.** Travis per-property values are withheld from the statewide StratMap dataset and gated behind the appraisal-district web portal, but the **full certified roll is published free** as a fixed-width PACS export; we parse it directly with `report_pipeline/12_parse_tcad_roll.py`. The roll re-certifies every mid-July (Tex. Property Tax Code §26.01), so the pipeline refreshes to a newer year by re-running one parser on the new `PROP.TXT`.
+[^pvs]: `PVS_RATIOS = {travis 1.00, williamson 0.96, hays 0.97}` with the per-county ADRS citations in `report_pipeline/v2_county_sources.py`. Applied as `value_per_acre_adj = (market_value / pvs_ratio) / land_acres` at `report_pipeline/13_build_metro_parcels.py`.
 
 ### 4.2 Fire operations (Group B)
 
@@ -159,7 +159,7 @@ Acreage comes from the CAD attribute where present and from the **parcel geometr
 
 > **Worked example.** A downtown parcel worth $40,000,000 on 1.0 acre → **$40,000,000/acre**. A suburban house worth $500,000 on 1.0 acre → **$500,000/acre**. Same footprint; 80× the productivity.
 
-[^acres]: Acreage fallback (CAD acres where positive, else parcel-geometry area in EPSG:2277) is implemented in `build_travis()`, `13_build_metro_parcels.py`. The roll's `legal_acreage` field sits between the two in the code but in practice fills none of the missing rows — the geometry footprint covers all 51,545 of them.
+[^acres]: Acreage fallback (CAD acres where positive, else parcel-geometry area in EPSG:2277) is implemented in `build_travis()`, `report_pipeline/13_build_metro_parcels.py`. The roll's `legal_acreage` field sits between the two in the code but in practice fills none of the missing rows — the geometry footprint covers all 51,545 of them.
 
 ### 5.2 Revenue
 
@@ -169,7 +169,7 @@ revenue = market_value × EFFECTIVE_TAX_RATE        (EFFECTIVE_TAX_RATE = 0.021)
 
 Summed across all 724,639 metro parcels this yields **≈ $12.56 billion/yr** in modeled property-tax revenue on **≈ $597.9 billion** of market value.[^rev]
 
-[^rev]: `tax_per_acre = taxable_value × EFFECTIVE_TAX_RATE / land_acres` — `13_build_metro_parcels.py`. The $597.9B / $12.56B totals are reconciled in [§11](#11--validation-appendix). Note the revenue model applies the rate to **market** value; actual bills are levied on taxable value after caps and exemptions, so $12.56B is the model's calibration total, not a collections forecast — the relative pattern is what carries.
+[^rev]: `tax_per_acre = taxable_value × EFFECTIVE_TAX_RATE / land_acres` — `report_pipeline/13_build_metro_parcels.py`. The $597.9B / $12.56B totals are reconciled in [§11](#11--validation-appendix). Note the revenue model applies the rate to **market** value; actual bills are levied on taxable value after caps and exemptions, so $12.56B is the model's calibration total, not a collections forecast — the relative pattern is what carries.
 
 ### 5.3 Fiscal break-even — two cost models
 
@@ -277,7 +277,7 @@ To read the fire dollars correctly, it helps to see AFD inside the whole City of
 
 ![Austin Fire Department in the context of the City of Austin FY2024-25 budget](../outputs/fig_afd_vs_city_budget.png)
 
-[^budgetfig]: Figures confirmed via the FY2024-25 City of Austin adopted budget (City Council adoption, Aug 2024). See [§11](#11--validation-appendix) for sources. Built in `15_build_report_figures.py` (`fig_afd_vs_city_budget`).
+[^budgetfig]: Figures confirmed via the FY2024-25 City of Austin adopted budget (City Council adoption, Aug 2024). See [§11](#11--validation-appendix) for sources. Built in `report_pipeline/15_build_report_figures.py` (`fig_afd_vs_city_budget`).
 
 ---
 
@@ -304,7 +304,7 @@ Below the named landmarks sits the **exact ranking** — the AFD response areas 
 
 ![Ranked inventory — AFD response areas by value-per-acre and fire net balance (coverage lens)](../outputs/fig_colloquial_inventory.png)
 
-*Full 285-area ranking in `outputs/colloquial_inventory.csv`; regenerates from the parquet + `fire_net_balance.geojson` via `15_build_report_figures.py` (`fig_colloquial_inventory`).*
+*Full 285-area ranking in `outputs/colloquial_inventory.csv`; regenerates from the parquet + `fire_net_balance.geojson` via `report_pipeline/15_build_report_figures.py` (`fig_colloquial_inventory`).*
 
 ---
 
@@ -353,7 +353,7 @@ Each of these affects how big the numbers are, not which way they point — whic
 
 #### The color key
 
-Two scales do all the work. The **sequential** one (`#1d3557 → #457b9d → #a8dadc → #e9c46a → #bc6c25`) means *value per acre, low → high*. The **diverging** one (burnt-orange `#9c4221` ↔ limestone `#efe9dd` ↔ bluebonnet `#2a6f97`) means *fire net balance*, centered on break-even. Both are defined once in `viz_palette.py` and reused by the explainer diagrams, the map preview, and the interactive map, so a color means the same thing wherever you see it. The three analytical charts in §6.2–6.3 come straight from the analysis notebooks and keep their own coloring, spelled out in each caption.
+Two scales do all the work. The **sequential** one (`#1d3557 → #457b9d → #a8dadc → #e9c46a → #bc6c25`) means *value per acre, low → high*. The **diverging** one (burnt-orange `#9c4221` ↔ limestone `#efe9dd` ↔ bluebonnet `#2a6f97`) means *fire net balance*, centered on break-even. Both are defined once in `report_pipeline/viz_palette.py` and reused by the explainer diagrams, the map preview, and the interactive map, so a color means the same thing wherever you see it. The three analytical charts in §6.2–6.3 come straight from the analysis notebooks and keep their own coloring, spelled out in each caption.
 
 Color is a shortcut, not the only signal: the two ends of the diverging scale can be hard to tell apart in print or for colorblind readers, so every chart and table also carries the actual numbers. (A grayscale-legible version of the map is in the Kindle/e-ink build.)
 
@@ -434,7 +434,7 @@ MODEL 3 — fire use vs pays-in
 
 ### Real code excerpts
 
-**Revenue & cross-county adjustment** — `13_build_metro_parcels.py`:
+**Revenue & cross-county adjustment** — `report_pipeline/13_build_metro_parcels.py`:
 
 ```python
 g["value_per_acre"] = g["market_value"] / g["land_acres"]
@@ -457,15 +457,15 @@ t['net_coverage_M'] = (t['value_share'] - t['coverage_share']) * AFD_BUDGET / 1e
 
 Every figure and number regenerates from committed code over public data:
 
-1. `12_parse_tcad_roll.py` → parse a certified TCAD roll (`PROP.TXT`) to per-parcel values.
-2. `13_build_metro_parcels.py` → Travis geometry + roll values + Williamson/Hays → metro parcel set.
+1. `report_pipeline/12_parse_tcad_roll.py` → parse a certified TCAD roll (`PROP.TXT`) to per-parcel values.
+2. `report_pipeline/13_build_metro_parcels.py` → Travis geometry + roll values + Williamson/Hays → metro parcel set.
 3. `notebooks/value_per_acre_metro.ipynb` · `fiscal_productivity.ipynb` · `fire_use_vs_pays.ipynb` → the three models.
 4. `notebooks/validation.ipynb` → the validation gate (`outputs/validation_report.csv`).
-5. `15_build_report_figures.py` → the explainer/diagram figures (+ data-charts when the parquet is present).
+5. `report_pipeline/15_build_report_figures.py` → the explainer/diagram figures (+ data-charts when the parquet is present).
 6. `notebooks/interactive_map.ipynb` → `outputs/fire_fiscal_interactive_map.html`.
-7. `14_build_report_pdf.py` → this document as a styled PDF.
+7. `report_pipeline/14_build_report_pdf.py` → this document as a styled PDF.
 
-**On a fresh clone**, the large data files (`parcels_value_per_acre_metro.parquet`, `fire_stations.geojson`, `metro_highways.geojson`) aren't tracked in git. Rebuild the parcels first (`12_parse_tcad_roll.py` → `13_build_metro_parcels.py`), then run the steps above in order. Each notebook and script checks whether its data is present and simply skips the parts it can't run yet, so nothing errors — the missing figures and map layers fill in once the data is there.
+**On a fresh clone**, the large data files (`parcels_value_per_acre_metro.parquet`, `fire_stations.geojson`, `metro_highways.geojson`) aren't tracked in git. Rebuild the parcels first (`report_pipeline/12_parse_tcad_roll.py` → `report_pipeline/13_build_metro_parcels.py`), then run the steps above in order. Each notebook and script checks whether its data is present and simply skips the parts it can't run yet, so nothing errors — the missing figures and map layers fill in once the data is there.
 
 ---
 
@@ -475,4 +475,4 @@ For policy context (single-stair building code, HOME initiative, WUI, NFPA 1710,
 
 ---
 
-*Generated by the Austin Housing & Land Use Working Group — Research Hub. Charts and the interactive map share a single color module (`viz_palette.py`); every headline number is reconciled in `outputs/validation_report.csv`.*
+*Generated by the Austin Housing & Land Use Working Group — Research Hub. Charts and the interactive map share a single color module (`report_pipeline/viz_palette.py`); every headline number is reconciled in `outputs/validation_report.csv`.*
