@@ -46,7 +46,7 @@ figure img { max-width:100%; max-height:4.8in; width:auto; border:1px solid #e0e
 figcaption { font-size:8.5pt; color:#555; font-style:italic; margin-top:4px; }
 code { background:#f0efe9; padding:1px 4px; border-radius:3px; font-size:8.8pt; color:#9c4221; }
 pre { background:#1d3557; color:#eef2f6; padding:11px 13px; border-radius:5px; overflow-x:auto;
-      font-size:8.4pt; line-height:1.42; page-break-inside:avoid; }
+      font-size:8.4pt; line-height:1.42; page-break-inside:avoid; white-space:pre-wrap; }
 pre code { background:none; color:#eef2f6; padding:0; }
 strong { color:#1d3557; }
 /* generated TOC (markdown 'toc' extension) */
@@ -119,13 +119,45 @@ def main():
                           "grayscale: dark = net drain, light = net contributor")
     text = re.sub(r'!\[([^\]]*)\]\(([^)]+)\)', embed, raw)
     body = markdown.markdown(text, extensions=[
-        "tables", "fenced_code", "attr_list", "footnotes", "toc"])
+        "tables", "fenced_code", "attr_list", "footnotes", "toc"],
+        extension_configs={"toc": {"toc_depth": "2-3"}})
+    # the document subtitle is an h3; drop its stray entry from the generated TOC
+    body = re.sub(r'<li><a href="#value-infrastructure[^"]*">[^<]*</a></li>', "", body, count=1)
     css = SCRIBE_CSS if SCRIBE else CSS
     HTML.write_text(f"<!DOCTYPE html><html><head><meta charset='utf-8'><style>{css}</style></head><body>{body}</body></html>")
     subprocess.run([CHROME, "--headless=new", "--no-sandbox", "--disable-gpu",
                     "--no-pdf-header-footer", f"--print-to-pdf={PDF}", HTML.as_uri()],
                    check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    _stamp_page_numbers()
     print(f"wrote {PDF} ({PDF.stat().st_size//1024} KB) and {HTML.name}")
+
+
+def _stamp_page_numbers():
+    """Overlay 'n / N' bottom-center (Chrome's CLI can't do custom footers).
+    Optional: skipped with a notice if reportlab isn't installed."""
+    try:
+        from pypdf import PdfReader, PdfWriter
+        from reportlab.pdfgen import canvas
+    except ImportError:
+        print("reportlab not installed — skipping page numbers (pip install reportlab)")
+        return
+    import io
+    reader = PdfReader(str(PDF))
+    total = len(reader.pages)
+    writer = PdfWriter()
+    for i, page in enumerate(reader.pages, start=1):
+        w, h = float(page.mediabox.width), float(page.mediabox.height)
+        buf = io.BytesIO()
+        c = canvas.Canvas(buf, pagesize=(w, h))
+        c.setFont("Helvetica", 8)
+        c.setFillColorRGB(0.33, 0.33, 0.33)
+        c.drawCentredString(w / 2, 22, f"{i} / {total}")
+        c.save()
+        buf.seek(0)
+        page.merge_page(PdfReader(buf).pages[0])
+        writer.add_page(page)
+    with open(PDF, "wb") as f:
+        writer.write(f)
 
 
 if __name__ == "__main__":

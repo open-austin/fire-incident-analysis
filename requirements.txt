@@ -11,3 +11,5 @@ pydeck>=0.9.0
 pyarrow>=14.0.0
 h3>=4.0.0
 markdown>=3.5
+pypdf>=4.0
+reportlab>=4.0

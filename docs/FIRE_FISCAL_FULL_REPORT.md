@@ -18,7 +18,7 @@
 >
 > The charts use two color keys — one for *value per acre*, one for *fire net balance*. You don't need to memorize them; the key is laid out in [§10](#the-color-key).
 >
-> Every number here is checked against the source data. §11 is the reconciliation table, and the headline figures footnote the exact line of code that produces them.
+> The headline figures are machine-reconciled against the source data — §11 is the reconciliation table, and it is explicit about which rows are recomputed and which are sourced constants — and each figure footnotes the exact line of code that produces it.
 
 [TOC]
 
@@ -73,10 +73,12 @@ Plot what an area pays in against what it costs to serve. Where the two lines cr
 
 ### 2.5 Fire coverage vs. fire demand
 
-A fire department's cost is mostly **standby**, not response. Roughly **90%** of a fire budget pays to keep a staffed company ready 24/7 within response-time reach of every zone — whether or not that zone calls often. So there are two very different ways to measure "use":
+A fire department's cost is mostly **standby**, not response. Roughly **90%** of a fire budget pays to keep a staffed company ready 24/7 within response-time reach of every zone — whether or not that zone calls often.[^standby] So there are two very different ways to measure "use":
 
 - **Demand** — how many (cost-weighted) calls a zone generates.
 - **Coverage** — the fixed cost of keeping a first-due company able to reach that zone in time.
+
+[^standby]: The ~90% is the fixed-readiness share of a fire budget — overwhelmingly the personnel cost of keeping companies staffed around the clock regardless of call volume. "As public safety is a labor-intensive service model, typically more than 90% of the budget is accounted for by personnel costs" — Steven Knight, PhD (Fitch & Associates), [FireRescue1](https://www.firerescue1.com/fire-chief/articles/doing-more-with-less-fire-department-budgets-fiscal-responsibility-GTj33j3axJ2tfshe/); for a worked line-item example (>90% non-discretionary once payroll, stations and apparatus are counted) see this [budget breakdown](https://www.firerescue1.com/fire-products/administration-billing/articles/budget-breakdown-the-real-cost-of-operating-a-fire-department-uB62rUFtPgUf8ZpZ/).
 
 ![Call volume falls with density, but staffed standby stays roughly fixed per zone](../outputs/fig_concept_coverage_demand.png)
 
@@ -153,11 +155,11 @@ Every formula is written out, with a worked example and a footnote pointing to t
 value_per_acre = market_value / land_acres
 ```
 
-Acreage comes from the CAD attribute where present and from the **parcel geometry footprint** (projected to EPSG:2277, Texas Central State Plane) where the CAD leaves it null — which recovers ~60% of suburban platted lots the CAD acreage field omits.[^acres] Values are winsorized at the 99th percentile for display, and parcels under 0.01 acre (data-artifact slivers) are dropped.
+Acreage comes from the CAD attribute where present and from the **parcel geometry footprint** (projected to EPSG:2277, Texas Central State Plane) where the CAD leaves it null — which fills in the **13.8%** of Travis parcels (about 18% of platted-lot-size parcels) whose CAD acreage field is empty.[^acres] Values are winsorized at the 99th percentile for display, and parcels under 0.01 acre (data-artifact slivers) are dropped.
 
 > **Worked example.** A downtown parcel worth $40,000,000 on 1.0 acre → **$40,000,000/acre**. A suburban house worth $500,000 on 1.0 acre → **$500,000/acre**. Same footprint; 80× the productivity.
 
-[^acres]: Acreage fallback chain (CAD acres → `legal_acreage` → geometry area in EPSG:2277) is implemented in `build_travis()`, `13_build_metro_parcels.py`.
+[^acres]: Acreage fallback (CAD acres where positive, else parcel-geometry area in EPSG:2277) is implemented in `build_travis()`, `13_build_metro_parcels.py`. The roll's `legal_acreage` field sits between the two in the code but in practice fills none of the missing rows — the geometry footprint covers all 51,545 of them.
 
 ### 5.2 Revenue
 
@@ -167,7 +169,7 @@ revenue = market_value × EFFECTIVE_TAX_RATE        (EFFECTIVE_TAX_RATE = 0.021)
 
 Summed across all 724,639 metro parcels this yields **≈ $12.56 billion/yr** in modeled property-tax revenue on **≈ $597.9 billion** of market value.[^rev]
 
-[^rev]: `tax_per_acre = taxable_value × EFFECTIVE_TAX_RATE / land_acres` — `13_build_metro_parcels.py`. The $597.9B / $12.56B totals are reconciled in [§11](#11--validation-appendix).
+[^rev]: `tax_per_acre = taxable_value × EFFECTIVE_TAX_RATE / land_acres` — `13_build_metro_parcels.py`. The $597.9B / $12.56B totals are reconciled in [§11](#11--validation-appendix). Note the revenue model applies the rate to **market** value; actual bills are levied on taxable value after caps and exemptions, so $12.56B is the model's calibration total, not a collections forecast — the relative pattern is what carries.
 
 ### 5.3 Fiscal break-even — two cost models
 
@@ -219,28 +221,30 @@ Across **724,639 metro parcels**, value per acre spans four orders of magnitude.
 
 Model A charges every area by its land area; Model B charges by the local road-miles it actually carries. Model B is the better proxy, because public infrastructure cost follows linear feet of road and pipe more closely than raw acreage. Switching from A to B sharpens the picture and **flips the verdict for 11 cities** — the deciding variable becomes value per road-mile.
 
-The cities that change verdict sort cleanly by home value. The ones that flip to net drains are the modest-value, road-heavy growth suburbs; the ones that strengthen are the high-value places with few road-miles per dollar of value:
+What decides a flip is value **per road-mile**, not home value alone. Four road-heavy growth suburbs flip to net drains (Buda, Georgetown, Kyle, Wells Branch); seven flip the other way, to contributor — most of them high-value (Bee Cave, Point Venture, Shady Hollow), but also modest Elgin, which clears the bar because it carries barely five road-miles. The familiar names:[^verdicts]
 
-| City | Median home value | Under the road-cost model |
+| City | Median home value | Land-cost model (A) → road-cost model (B) |
 |---|---|---|
-| West Lake Hills | ~$1.69M | strengthens — high value, few road-miles |
-| Bee Cave | ~$850k | strengthens |
-| Lakeway | ~$750k | strengthens |
-| *Austin (reference)* | ~$500k | clears break-even |
-| Buda | ~$400k | flips to net drain |
-| Georgetown | ~$380k | flips to net drain |
-| San Marcos | ~$330k | flips to net drain |
-| Kyle | ~$315k | flips to net drain |
+| West Lake Hills | ~$1.74M | contributor under both — strengthens (high value, few road-miles) |
+| Bee Cave | ~$835k | **flips to contributor** |
+| Lakeway | ~$740k | contributor under both — strengthens |
+| *Austin (reference)* | ~$495k | contributor under both |
+| Buda | ~$404k | **flips to net drain** |
+| Georgetown | ~$375k | **flips to net drain** |
+| San Marcos | ~$327k | net drain under **both** models |
+| Kyle | ~$315k | **flips to net drain** |
 
 The unincorporated county runs a deficit of about **−$2 billion/yr under both models**, so that gap is genuinely road-heavy, lower-value subdivision — not an artifact of how Model A assumes cost.
 
+[^verdicts]: The full 46-city ledger — revenue, acres, road-miles, both nets, median home value, and verdict — is exported by `notebooks/fiscal_productivity.ipynb` to `outputs/city_fiscal_verdicts.csv`. The 11 verdict-changers: Bee Cave, Elgin, Liberty Hill, Manor, Point Venture, Shady Hollow, Woodcreek (→ contributor); Buda, Georgetown, Kyle, Wells Branch (→ net drain).
+
 ![Fiscal productivity by city — land-cost (Model A) vs road-cost (Model B); 11 cities change verdict](../outputs/fiscal_land_vs_road.png)
 
-*Median home value = the median market value of residential-sized parcels (0.05–1.5 acres) in each city, computed from the parcel roll (`parcels_value_per_acre_metro.parquet`).*
+*Median home value = the median market value of residential-sized parcels (0.05–1.5 acres) in each city, computed from the parcel roll and exported with the verdicts to `outputs/city_fiscal_verdicts.csv`.*
 
 ### 6.3 Fire service — the same shape, with consumption data
 
-This breaks the 285 served AFD response areas ($263B property value, 20,920 fire calls) into three area types by density:
+This breaks the 285 served AFD response areas ($263B property value; 20,136 of the 20,920 citywide fire calls) into three area types by density:
 
 - **Urban core** — the dense central-city zones (downtown and the older grid).
 - **Inner suburban** — the established neighborhoods ringing the core: moderate density, mostly older housing.
@@ -253,6 +257,8 @@ Depending on which cost lens you use, two of those three switch sign — and tha
 | Inner suburban | −$22M (subsidized) | +$45M | **+$32M** |
 | Outer suburban | +$21M (contributes) | −$51M | **−$33M** |
 | Urban core | +$2M | +$8M | +$4M |
+
+*Two zones with no ACS density classification are omitted from the table (−$0.2M demand, −$1.6M coverage); including them, each column sums to ≈0 — the conservation check in [§11](#11--validation-appendix).*
 
 - **Demand lens:** busy older inner areas generate the most calls, so they look like they "use" the most.
 - **Coverage lens:** this is the lens that matches how a fire budget actually works — about 90% of it is the fixed cost of keeping a staffed company ready, not running calls. On that basis the result **flips**: every spread-out outer-suburban zone still needs its own staffed station but holds only about half the taxable value per zone, so **low-density outer development is the net drain on fire coverage**.
@@ -279,7 +285,7 @@ To read the fire dollars correctly, it helps to see AFD inside the whole City of
 
 The numbers are easier to trust against places you can actually picture. The companion **[interactive 3D map](../outputs/fire_fiscal_interactive_map.html)** lets you toggle four layers — value-per-acre (extruded), fire net balance, fire stations, and these landmark pins — and click any zone for its value, pays-in, and net.
 
-![Static preview of the interactive 3D map — response-area choropleth with colloquial landmark pins (bluebonnet = high value / contributor, burnt-orange = net drain)](../outputs/fig_interactive_map_preview.png)
+![Static preview of the interactive 3D map — response-area choropleth with colloquial landmark pins (bluebonnet = high value / contributor, burnt-orange = net drain); pins are shown for landmarks inside AFD's service extent — the outer-metro cities in the table below sit beyond the map edge](../outputs/fig_interactive_map_preview.png)
 
 | Landmark | Colloquial read | Productivity signal |
 |---|---|---|
@@ -292,9 +298,9 @@ The numbers are easier to trust against places you can actually picture. The com
 | **Northland / north-central** | older north-central corridor | mixed — demand-heavy under the call lens |
 | **Georgetown** | growth suburb, large footprint | **flips to net drain** under the road-cost model |
 | **Kyle / Buda** | fast-growing outer suburbs | **net drains** — lots of pavement per dollar of value |
-| **San Marcos** | outer-metro college town | net drain on the road model; local square is a peak |
+| **San Marcos** | outer-metro college town | net drain under **both** cost models; local square is a peak |
 
-Below the named landmarks sits the **exact ranking** — the AFD response areas (by their operational zone code and urban class) that contribute and drain the most under the coverage lens, with each zone's measured value per acre. The pattern is unmistakable: the top contributors are high-value zones ($20–46M/acre), and every one of the biggest drains is a low-value outer/inner-suburban zone. The drains cluster near **−$0.93M** because that is the floor — a zone holding almost no taxable value still consumes one zone's share of standby (`1/285 × $264M`).
+Below the named landmarks sits the **exact ranking** — the AFD response areas (by their operational zone code and urban class) that contribute and drain the most under the coverage lens, with each zone's measured value per acre. The pattern is strong though not airtight: the top four contributors are very high-value zones ($20–46M/acre), led by the downtown zone, while the fifth is a populous low-value outer zone — and every one of the biggest drains is a low-value outer/inner-suburban zone. The drains cluster near **−$0.93M** because that is the floor — a zone holding almost no taxable value still consumes one zone's share of standby (`1/285 × $264M`).
 
 ![Ranked inventory — AFD response areas by value-per-acre and fire net balance (coverage lens)](../outputs/fig_colloquial_inventory.png)
 
@@ -318,7 +324,7 @@ These come from **different agencies, in different units, by different methods**
 
 - **Calibration, not budgets.** Both fiscal cost models are calibrated to break even metro-wide, not to actual municipal expenditure; absolute dollars are first-order. The AFD budget figure scales the fire dollars only — it does not affect the relative pattern.
 - **Tax rate.** A blended ~2.1% effective rate is used; real per-jurisdiction rates vary, but a uniform rate cancels in the relative comparison.
-- **Fire scope.** AFD / City of Austin only. Suburban **ESD** fire departments run separate departments with no comparable open incident data, so they are stated as out of scope rather than silently dropped; **fire calls only — EMS/medical excluded**; three years (2022–2024).
+- **Fire scope.** AFD / City of Austin only. Suburban **ESD** fire departments run separate departments with no comparable open incident data, so they are stated as out of scope rather than silently dropped; **fire calls only — EMS/medical excluded**; three years (2022–2024). Pays-in denominators count **Travis parcels only**, so the few served zones spilling into Williamson/Hays have their value — and hence pays-in — modestly understated.
 - **Infrastructure proxy.** Road-miles omit water/sewer line-miles and service frequency; apparatus weighting omits crew-shift detail. Coverage cost allocated per first-due zone.
 - **Vintage mix.** Travis values are 2025 certified; Williamson/Hays are their current published cycle. All ~2025; not identically dated.
 
@@ -355,7 +361,7 @@ Color is a shortcut, not the only signal: the two ends of the diverging scale ca
 
 ## 11 · Validation appendix
 
-All headline numbers pass a machine-generated reconciliation (`notebooks/validation.ipynb` → `outputs/validation_report.csv`). **All 18 checks are green** — present-data, external-constant, *and* the parcel-dependent checks (run against the full 724,639-parcel roll). The net-balance conservation check holds to machine precision (`1.1e-16`), and the run also exports `processed_data/fire_net_balance.geojson` that feeds the interactive map's fire layer.
+The headline numbers pass a machine-generated reconciliation (`notebooks/validation.ipynb` → `outputs/validation_report.csv`). **All 24 checks are green.** The table has two kinds of row and is explicit about which is which: the **recomputed checks** re-derive their numbers from the source files on every run — incident and parcel counts, totals, the break-even, the fire net-balance (rebuilt from scratch rather than read from the analysis notebook), the §6.2 city verdicts, the §6.3 class table, and station distances, all against the full 724,639-parcel roll — while the five **citation-log rows** record the externally sourced constants (budget figures, tax rate) with their sources rather than measuring them. The net-balance conservation check holds to machine precision (`1.1e-16`), and the run also exports `processed_data/fire_net_balance.geojson` that feeds the interactive map's fire layer.
 
 ![Validation reconciliation table](../outputs/validation_summary.png)
 
@@ -442,7 +448,7 @@ g["tax_per_acre"] = g["taxable_value"] * EFFECTIVE_TAX_RATE / g["land_acres"]
 ```python
 t['value_share']    = t['prop_value'] / t['prop_value'].sum()
 t['callcost_share'] = t['wcalls']     / t['wcalls'].sum()
-t['coverage_share'] = 1.0 / len(t)                          # each zone = one staffed company
+t['coverage_share'] = 1.0 / len(t)     # each zone = one staffed company
 t['net_demand_M']   = (t['value_share'] - t['callcost_share']) * AFD_BUDGET / 1e6
 t['net_coverage_M'] = (t['value_share'] - t['coverage_share']) * AFD_BUDGET / 1e6
 ```

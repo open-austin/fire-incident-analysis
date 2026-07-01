@@ -100,7 +100,7 @@ def fig_data_inputs_flow():
 # ----------------------------------------------------------------- 2. value-per-acre concept
 def fig_concept_value_per_acre():
     fig, axes = plt.subplots(1, 2, figsize=(10, 4.4))
-    fig.suptitle("Value per acre: same land, different productivity", fontsize=13)
+    fig.suptitle("Value per acre: same land, different productivity", fontsize=13, y=1.06)
     parcels = [("Suburban house\n1 acre · $0.5M market", 0.5, SEQ(0.18), "$500k / acre"),
                ("Downtown mid-rise\n1 acre · $40M market", 40.0, SEQ(0.95), "$40M / acre")]
     for ax, (title, val, color, label) in zip(axes, parcels):
@@ -255,7 +255,12 @@ def fig_interactive_map_preview(gray_safe=False):
     gdf.plot(ax=ax, color="#eceae2", edgecolor="#d8d2c4", linewidth=0.2, zorder=1)
     served.plot(ax=ax, column="net_coverage_M", cmap=cmap, norm=norm,
                 edgecolor="#9a958a", linewidth=0.25, zorder=2)
+    xlim = (served.total_bounds[0] - 0.05, served.total_bounds[2] + 0.20)
+    ylim = (served.total_bounds[1] - 0.06, served.total_bounds[3] + 0.09)
+    # only pin landmarks that fall inside the map extent (with a margin so labels fit)
     for name, lon, lat, kind in LANDMARKS:
+        if not (xlim[0] + 0.02 < lon < xlim[1] - 0.06 and ylim[0] + 0.02 < lat < ylim[1] - 0.02):
+            continue
         ax.scatter(lon, lat, s=64, color=pin[kind], edgecolor="white", linewidth=1.3, zorder=4)
         ax.annotate(name, (lon, lat), xytext=(5, 3), textcoords="offset points",
                     fontsize=8, fontweight="bold", color=vp.INK, zorder=5,
@@ -265,9 +270,8 @@ def fig_interactive_map_preview(gray_safe=False):
     cb.set_label(f"fire net balance — coverage lens ($M/yr)\n{cb_note}", fontsize=8)
     ax.set_title("Fire net balance by AFD response area, with colloquial landmarks\n"
                  "(static preview of the interactive 3D map)", fontsize=12, color=vp.INK)
-    ax.set_xlabel("longitude"); ax.set_ylabel("latitude")
-    ax.set_xlim(served.total_bounds[0] - 0.05, served.total_bounds[2] + 0.20)
-    ax.set_ylim(served.total_bounds[1] - 0.05, served.total_bounds[3] + 0.05)
+    ax.set_xticks([]); ax.set_yticks([]); ax.grid(False)
+    ax.set_xlim(*xlim); ax.set_ylim(*ylim)
     _save(fig, outname)
 
 
@@ -317,11 +321,11 @@ def fig_colloquial_inventory(n=8):
         for _, r in df.iterrows():
             cells.append(_fmt(r)); rowcolors.append([None, None, None, r["net_coverage_M"]])
 
-    fig, ax = plt.subplots(figsize=(11, 0.4 * len(cells) + 1.0)); ax.axis("off")
+    fig, ax = plt.subplots(figsize=(11, 0.28 * len(cells) + 0.7)); ax.axis("off")
     ax.set_title("Ranked inventory — AFD response areas by value-per-acre & fire net balance",
-                 fontsize=13, color=vp.INK, pad=12)
+                 fontsize=13, color=vp.INK, pad=4, y=0.99)
     tbl = ax.table(cellText=cells, colLabels=headers, loc="center", cellLoc="left")
-    tbl.auto_set_font_size(False); tbl.set_fontsize(8.5); tbl.scale(1, 1.5)
+    tbl.auto_set_font_size(False); tbl.set_fontsize(8.5); tbl.scale(1, 1.35)
     for (rr, cc), cell in tbl.get_celld().items():
         cell.set_edgecolor("#d8d2c4")
         if rr == 0:
