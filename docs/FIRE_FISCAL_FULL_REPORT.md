@@ -16,7 +16,7 @@
 > | **15 minutes** | §1, §2, §6 |
 > | **the whole thing (~45 min)** | everything, including the calculations (§5) and appendices (§10–13) |
 >
-> The charts use two color keys — one for *value per acre*, one for *fire net balance*. You don't need to memorize them; the key is laid out in [§10](#a-note-on-color).
+> The charts use two color keys — one for *value per acre*, one for *fire net balance*. You don't need to memorize them; the key is laid out in [§10](#the-color-key).
 >
 > Every number here is checked against the source data. §11 is the reconciliation table, and the headline figures footnote the exact line of code that produces them.
 
@@ -91,7 +91,7 @@ Not every call or company costs the same. A full first-alarm structure fire comm
 
 ---
 
-## 3 · Data inputs at a glance
+## 3 · The data inputs
 
 The analysis draws on three groups of sources, feeding three models, producing three findings. The grouping is by **function**: what each source measures.
 
@@ -103,7 +103,7 @@ The analysis draws on three groups of sources, feeding three models, producing t
 
 ---
 
-## 4 · Data sources — deep dive
+## 4 · The data sources, in detail
 
 For each source: what the agency is, what the dataset is, its vintage, why it's the authoritative source, and what we use it for.
 
@@ -174,7 +174,7 @@ Summed across all 724,639 metro parcels this yields **≈ $12.56 billion/yr** in
 Each model is **calibrated so the metro breaks even in aggregate**, so the output is *who is above/below average*, independent of the exact budget.
 
 - **Model A — cost ∝ land area.** `break_even_per_acre = total_levy / total_acres`; `net_per_acre = tax_per_acre − break_even_per_acre`. The metro-wide break-even is **$8,421/acre**.[^modelA]
-- **Model B — cost ∝ local road-miles** (the Strong Towns "value per road-mile"). Cost is allocated by the local road network each area carries (TIGER roads, excluding state-maintained interstates). This is the more defensible model: public infrastructure cost tracks *linear feet of road and pipe*, not raw acreage.
+- **Model B — cost ∝ local road-miles** (the Strong Towns "value per road-mile"). Cost is allocated by the local road network each area carries (TIGER roads, excluding state-maintained interstates). This is the better proxy, since public infrastructure cost follows linear feet of road and pipe more closely than raw acreage.
 
 > **Worked example (Model A).** A parcel paying $12,000/acre in tax sits **+$3,579/acre above** the $8,421 break-even — a net contributor. One paying $4,000/acre sits **−$4,421/acre below** — cross-subsidized.
 
@@ -382,7 +382,7 @@ Extends the 21-term glossary in `docs/RESEARCH_CONTEXT.md` with the financial co
 | **Value per road-mile** | Strong Towns metric: property value divided by the local road network an area carries. |
 | **Pays-in (fire)** | An area's share of citywide property value × the AFD budget — what its taxes contribute to fire. |
 | **Demand lens** | Fire "use" measured as cost-weighted call volume. |
-| **Coverage lens** | Fire "use" measured as the fixed standby cost of a first-due company per zone (the realistic cost driver). |
+| **Coverage lens** | Fire "use" measured as the fixed standby cost of keeping a first-due company per zone — the cost that dominates a fire budget. |
 | **Apparatus weighting** | Scaling cost by the actual equipment/crew committed (ladder/quint > engine; structure fire > trash). |
 | **Net balance** | pays-in − use, in $/yr; positive = net contributor, negative = net drain. |
 | **PVS / sales ratio** | Comptroller's median appraisal-to-sale ratio, used to make values comparable across counties. |
@@ -459,7 +459,7 @@ Every figure and number regenerates from committed code over public data:
 6. `notebooks/interactive_map.ipynb` → `outputs/fire_fiscal_interactive_map.html`.
 7. `14_build_report_pdf.py` → this document as a styled PDF.
 
-**Staged-run runbook** (when `parcels_value_per_acre_metro.parquet`, `fire_stations.geojson`, `metro_highways.geojson` are restored to `processed_data/`): re-run `validation.ipynb` (parquet rows flip green and it writes `fire_net_balance.geojson`) → `15_build_report_figures.py` (data-charts regenerate) → `interactive_map.ipynb` (value/acre + stations layers activate, response areas recolor to true net balance) → `14_build_report_pdf.py` (rebuild). No code changes — only the guarded branches activate.
+**On a fresh clone**, the large data files (`parcels_value_per_acre_metro.parquet`, `fire_stations.geojson`, `metro_highways.geojson`) aren't tracked in git. Rebuild the parcels first (`12_parse_tcad_roll.py` → `13_build_metro_parcels.py`), then run the steps above in order. Each notebook and script checks whether its data is present and simply skips the parts it can't run yet, so nothing errors — the missing figures and map layers fill in once the data is there.
 
 ---
 
