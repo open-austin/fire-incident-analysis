@@ -59,6 +59,11 @@ strong { color:#1d3557; }
 .footnote ol { padding-left:18px; }
 .footnote li { margin:2px 0; }
 sup a, a.footnote-ref { color:#9c4221; text-decoration:none; font-weight:600; }
+/* §15 'To be done' — own page with banner; while it exists, every PDF page is
+   also watermarked UNFINISHED in post-processing (_stamp_page_numbers) */
+h2.todo-page { page-break-before: always; }
+.unfinished-banner { border:4px solid #9c4221; color:#9c4221; font-size:26pt; font-weight:800;
+  text-align:center; letter-spacing:0.35em; text-indent:0.35em; padding:10px 0 8px; margin:16px 0; }
 """
 
 # Kindle Scribe: 6.2 x 8.27 in panel @ 300 ppi. Page == screen so type renders 1:1;
@@ -95,6 +100,10 @@ strong { color:#1d3557; }
 .footnote ol { padding-left:18px; }
 .footnote li { margin:2px 0; }
 sup a, a.footnote-ref { color:#9c4221; text-decoration:none; font-weight:600; }
+/* §15 'To be done' — own page; grayscale-safe banner for e-ink (watermark stamped in post) */
+h2.todo-page { page-break-before: always; }
+.unfinished-banner { border:3px solid #333; color:#222; font-size:19pt; font-weight:800;
+  text-align:center; letter-spacing:0.3em; text-indent:0.3em; padding:8px 0 6px; margin:13px 0; }
 """
 
 
@@ -128,12 +137,14 @@ def main():
     subprocess.run([CHROME, "--headless=new", "--no-sandbox", "--disable-gpu",
                     "--no-pdf-header-footer", f"--print-to-pdf={PDF}", HTML.as_uri()],
                    check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    _stamp_page_numbers()
+    # while the doc carries the §15 UNFINISHED banner, watermark every page
+    _stamp_page_numbers(watermark="UNFINISHED" if "unfinished-banner" in raw else None)
     print(f"wrote {PDF} ({PDF.stat().st_size//1024} KB) and {HTML.name}")
 
 
-def _stamp_page_numbers():
-    """Overlay 'n / N' bottom-center (Chrome's CLI can't do custom footers).
+def _stamp_page_numbers(watermark=None):
+    """Overlay 'n / N' bottom-center (Chrome's CLI can't do custom footers), plus an
+    optional translucent diagonal watermark on every page.
     Optional: skipped with a notice if reportlab isn't installed."""
     try:
         from pypdf import PdfReader, PdfWriter
@@ -149,6 +160,18 @@ def _stamp_page_numbers():
         w, h = float(page.mediabox.width), float(page.mediabox.height)
         buf = io.BytesIO()
         c = canvas.Canvas(buf, pagesize=(w, h))
+        if watermark:
+            c.saveState()
+            if SCRIBE:  # grayscale-safe on e-ink
+                c.setFillColorRGB(0.25, 0.25, 0.25)
+            else:       # palette burnt-orange
+                c.setFillColorRGB(0.612, 0.259, 0.129)
+            c.setFillAlpha(0.11)
+            c.translate(w / 2, h / 2)
+            c.rotate(32)
+            c.setFont("Helvetica-Bold", w * 0.135)
+            c.drawCentredString(0, -w * 0.045, watermark)
+            c.restoreState()
         c.setFont("Helvetica", 8)
         c.setFillColorRGB(0.33, 0.33, 0.33)
         c.drawCentredString(w / 2, 22, f"{i} / {total}")
