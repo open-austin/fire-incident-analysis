@@ -26,13 +26,15 @@
 
 ## 1 · Executive summary
 
-The question is simple: **can each part of the metro pay its own way?** Does it bring in enough public revenue to cover the infrastructure and services it uses? We test that three ways — land value per acre, road cost, and fire-service cost — each from a separate dataset.
+The question is simple: **can each part of the metro pay its own way?** Does it bring in enough public revenue to cover the infrastructure and services it uses? We test that three ways — land value per acre,[^vpa] road cost, and fire-service cost — each from a separate dataset.
 
 The three lenses agree. What decides whether an area pays its way is its **value per unit of infrastructure** — not whether you call it a city or a suburb. Dense, high-value land, plus a few wealthy low-density enclaves, brings in far more than it costs to serve. Low-value, low-density development — the unincorporated fringe and the road-heavy growth suburbs — does not, and the dense core covers the gap.
 
 Three unrelated measurements (property value, road-miles, fire standby) point the same way, so the finding doesn't rest on any one method.[^converge]
 
 It is not simply suburb-versus-city. West Lake Hills, Lakeway, and Rollingwood pay their way because their land is valuable enough to clear the bar, even at low density. The areas that fall short are the broad band of **low-value, low-density development** — much of it newer growth suburbs and unincorporated subdivision.
+
+[^vpa]: The value-per-acre lens comes from the Strong Towns movement and the Urban3 mapping practice: Charles L. Marohn Jr., *Strong Towns: A Bottom-Up Revolution to Rebuild American Prosperity* (Hoboken, NJ: Wiley, 2019); Joseph Minicozzi, "The Smart Math of Mixed-Use Development," *Planetizen*, January 23, 2012, https://www.planetizen.com/node/53922; and, for the method itself, Daniel Herriges, "Value Per Acre Analysis: A How-To for Beginners," *Strong Towns*, October 19, 2018, https://www.strongtowns.org/journal/2018/10/19/value-per-acre-analysis-a-how-to-for-beginners. Full citations for every source are in the [bibliography](#bibliography).
 
 [^converge]: The convergence argument is developed in full in [§8](#8--why-the-data-support-the-conclusion). A bias in any single method (e.g. the blended tax rate, the uniform-cost assumption) cannot explain agreement across three different agencies, units, and methods.
 
@@ -45,13 +47,15 @@ A short definition of each idea the report uses, with a picture. The full [gloss
 ### 2.1 Land value, and market vs. assessed/appraised value
 
 - **Market value** — what an appraisal district estimates a property would sell for. This is the figure we use for revenue, because property tax is levied against value.
-- **Appraised / assessed value** — market value after caps and exemptions (e.g. the 10% homestead cap). Taxes are actually levied on this; we use it for the tax-per-acre lens and market value for the value lens.
+- **Appraised / assessed value** — market value after caps and exemptions (e.g. the 10% homestead cap[^hscap]). Taxes are actually levied on this; we use it for the tax-per-acre lens and market value for the value lens.
 
 So "value" throughout is the appraisal district's estimate of what the land and buildings are worth — the number the tax rate gets multiplied against.
 
+[^hscap]: Tex. Tax Code § 23.23 ("Limitation on Appraised Value of Residence Homestead"), Texas Constitution and Statutes, accessed July 1, 2026, https://statutes.capitol.texas.gov/GetStatute.aspx?Code=TX&Value=23.23. The cap limits year-over-year growth in a homestead's appraised value to 10% plus the value of new improvements.
+
 ### 2.2 Value per acre
 
-The central idea, borrowed from the Strong Towns / Urban3 framing: **public infrastructure cost scales with land *area*** (linear feet of road and pipe, geographic coverage to patrol and serve), while **public revenue scales with property *value***. So the meaningful productivity ratio is value **per acre**.
+The central idea, borrowed from the Strong Towns / Urban3 framing:[^vpa] **public infrastructure cost scales with land *area*** (linear feet of road and pipe, geographic coverage to patrol and serve), while **public revenue scales with property *value***. So the meaningful productivity ratio is value **per acre**.
 
 ![Two parcels of identical size produce vastly different revenue per acre](../outputs/fig_concept_value_per_acre.png)
 
@@ -61,7 +65,7 @@ Two parcels can sit on the same acre — same road, same pipe, same area to cove
 
 Revenue is `value × an effective tax rate`. The **effective** rate blends every overlapping jurisdiction — City of Austin, the county, the school district (AISD), the community college (ACC), and special districts — into one number applied to market value. We use a blended **~2.1%**.[^rate] A uniform rate **cancels** in any relative (above/below average) comparison, so the *pattern* does not depend on getting the rate exactly right — only the absolute dollars do.
 
-[^rate]: `EFFECTIVE_TAX_RATE = 0.021` is defined once at `report_pipeline/13_build_metro_parcels.py:22` and reused everywhere. Validated against published City/county/AISD/ACC rates — see [§11](#11--validation-appendix).
+[^rate]: Adopted 2024 (FY2024-25) rates per $100 of value — City of Austin 0.4776, Travis County 0.3444, Austin ISD 0.9505, Austin Community College 0.1013 (≈1.87% combined; ≈1.98% adding Central Health): Travis County Tax Office, "Truth in Taxation Summary" (posted under Tex. Tax Code § 26.16), accessed July 1, 2026, https://www.traviscountytx.gov/tax-rates. The model's 2.1% blend sits slightly above that sum to stand in for the remaining special districts; because the rate is applied uniformly, any error in it cancels in every relative comparison. `EFFECTIVE_TAX_RATE = 0.021` is defined once at `report_pipeline/13_build_metro_parcels.py:22` and reused everywhere — see [§11](#11--validation-appendix).
 
 ### 2.4 Fiscal productivity & break-even
 
@@ -73,12 +77,14 @@ Plot what an area pays in against what it costs to serve. Where the two lines cr
 
 ### 2.5 Fire coverage vs. fire demand
 
-A fire department's cost is mostly **standby**, not response. Roughly **90%** of a fire budget pays to keep a staffed company ready 24/7 within response-time reach of every zone — whether or not that zone calls often.[^standby] So there are two very different ways to measure "use":
+A fire department's cost is mostly **standby**, not response. Roughly **90%** of a fire budget pays to keep a staffed company ready 24/7 within response-time reach[^nfpa] of every zone — whether or not that zone calls often.[^standby] So there are two very different ways to measure "use":
 
 - **Demand** — how many (cost-weighted) calls a zone generates.
 - **Coverage** — the fixed cost of keeping a first-due company able to reach that zone in time.
 
-[^standby]: The ~90% is the fixed-readiness share of a fire budget — overwhelmingly the personnel cost of keeping companies staffed around the clock regardless of call volume. "As public safety is a labor-intensive service model, typically more than 90% of the budget is accounted for by personnel costs" — Steven Knight, PhD (Fitch & Associates), [FireRescue1](https://www.firerescue1.com/fire-chief/articles/doing-more-with-less-fire-department-budgets-fiscal-responsibility-GTj33j3axJ2tfshe/); for a worked line-item example (>90% non-discretionary once payroll, stations and apparatus are counted) see this [budget breakdown](https://www.firerescue1.com/fire-products/administration-billing/articles/budget-breakdown-the-real-cost-of-operating-a-fire-department-uB62rUFtPgUf8ZpZ/).
+[^standby]: The ~90% is the fixed-readiness share of a fire budget — overwhelmingly the personnel cost of keeping companies staffed around the clock regardless of call volume. "As public safety is a labor-intensive service model, typically more than 90% of the budget is accounted for by personnel costs": Steven Knight, "Doing More with Less: Fire Department Budgets, Fiscal Responsibility," *FireRescue1*, August 14, 2018, https://www.firerescue1.com/fire-chief/articles/doing-more-with-less-fire-department-budgets-fiscal-responsibility-GTj33j3axJ2tfshe/. For a worked line-item example (>90% non-discretionary once payroll, stations, and apparatus are counted): Steve Pegram, "Budget Breakdown: The Real Cost of Operating a Fire Department," *FireRescue1*, October 8, 2021, https://www.firerescue1.com/fire-products/administration-billing/articles/budget-breakdown-the-real-cost-of-operating-a-fire-department-uB62rUFtPgUf8ZpZ/.
+
+[^nfpa]: Response-time coverage benchmarks for career fire departments are set by National Fire Protection Association, *NFPA 1710: Standard for the Organization and Deployment of Fire Suppression Operations, Emergency Medical Operations, and Special Operations to the Public by Career Fire Departments*, 2020 ed. (Quincy, MA: NFPA, 2020), https://www.nfpa.org/codes-and-standards/nfpa-1710-standard-development/1710. NFPA 1710 was consolidated into NFPA 1750 for the 2026 edition; the 2020 edition is the last standalone one.
 
 ![Call volume falls with density, but staffed standby stays roughly fixed per zone](../outputs/fig_concept_coverage_demand.png)
 
@@ -115,13 +121,16 @@ For each source: what the agency is, what the dataset is, its vintage, why it's 
 
 | Source | Agency | What it is | Records | Vintage | Why authoritative |
 |---|---|---|---|---|---|
-| **Travis parcels** | **TCAD** (Travis Central Appraisal District) | Public parcel GIS geometry joined to the **2025 Certified Appraisal Roll** (PACS `PROP.TXT` fixed-width export), by `PROP_ID` | 373,471 | 2025 certified | TCAD is the *statutory* appraiser for Travis County (Tex. Property Tax Code). The certified roll is the legal basis for every tax bill in the county.[^tcad] |
-| **Williamson parcels** | **WCAD** via Williamson County GIS ArcGIS FeatureServer | Parcels bundling `TotalPropMktValue` + geometry + `AssessedAc` + use | 265,506 | current cycle | WCAD is the statutory appraiser for Williamson County; the county GIS republishes its certified values. |
-| **Hays parcels** | **Hays CAD** ArcGIS FeatureServer (`countygis.DBO.Parcels`) | Parcels with `market`, `land_val`, `imprv_val`, `legal_acreage` | 85,662 | current cycle | Hays CAD is the statutory appraiser for Hays County. |
+| **Travis parcels** | **TCAD** (Travis Central Appraisal District) | Public parcel GIS geometry[^travisgeo] joined to the **2025 Certified Appraisal Roll** (PACS `PROP.TXT` fixed-width export), by `PROP_ID` | 373,471 | 2025 certified | TCAD is the *statutory* appraiser for Travis County (Tex. Property Tax Code). The certified roll is the legal basis for every tax bill in the county.[^tcad] |
+| **Williamson parcels** | **WCAD** via Williamson County GIS ArcGIS FeatureServer | Parcels bundling `TotalPropMktValue` + geometry + `AssessedAc` + use | 265,506 | current cycle | WCAD is the statutory appraiser for Williamson County; the county GIS republishes its certified values.[^wcad] |
+| **Hays parcels** | **Hays CAD** ArcGIS FeatureServer (`countygis.DBO.Parcels`) | Parcels with `market`, `land_val`, `imprv_val`, `legal_acreage` | 85,662 | current cycle | Hays CAD is the statutory appraiser for Hays County.[^hayscad] |
 | **Cross-county comparability** | **Texas Comptroller** Property Value Study / Appraisal District Ratio Study | Median appraisal-to-sale ratio, Category A | — | 2022–2024 ADRS | The Comptroller independently audits each district's level of appraisal; we divide by these ratios so a dollar of "market value" means the same across counties.[^pvs] |
 
-[^tcad]: **Provenance note.** Travis per-property values are withheld from the statewide StratMap dataset and gated behind the appraisal-district web portal, but the **full certified roll is published free** as a fixed-width PACS export; we parse it directly with `report_pipeline/12_parse_tcad_roll.py`. The roll re-certifies every mid-July (Tex. Property Tax Code §26.01), so the pipeline refreshes to a newer year by re-running one parser on the new `PROP.TXT`.
-[^pvs]: `PVS_RATIOS = {travis 1.00, williamson 0.96, hays 0.97}` with the per-county ADRS citations in `report_pipeline/v2_county_sources.py`. Applied as `value_per_acre_adj = (market_value / pvs_ratio) / land_acres` at `report_pipeline/13_build_metro_parcels.py`.
+[^tcad]: Travis Central Appraisal District, "Public Information," 2025 Certified Export (July) — the certified appraisal-roll data download, accessed July 1, 2026, https://traviscad.org/publicinformation/. **Provenance note.** Travis per-property values are withheld from the statewide StratMap dataset and gated behind the appraisal-district web portal, but the **full certified roll is published free** — the downloaded ZIP contains a fixed-width PACS export (`PROP.TXT`), which we parse directly with `report_pipeline/12_parse_tcad_roll.py`. The chief appraiser prepares and certifies the roll to each taxing unit every July under Tex. Tax Code § 26.01 ("Submission of Rolls to Taxing Units," https://statutes.capitol.texas.gov/GetStatute.aspx?Code=TX&Value=26.01), so the pipeline refreshes to a newer year by re-running one parser on the new `PROP.TXT`.
+[^travisgeo]: City of Austin, Housing and Planning Department, "Land Database Dash View" (2023 Land Database), ArcGIS feature service, layer 93 (`main.land_database_reorder`), last edited May 28, 2026, accessed July 1, 2026, https://services.arcgis.com/0L95CJ0VTaxqcmED/arcgis/rest/services/2023_Land_Database_Dash_View/FeatureServer/93. Geometry merged from the Travis, Williamson, Hays, and Bastrop appraisal-district parcel layers; coverage spans Austin's full- and limited-purpose jurisdiction and ETJ.
+[^wcad]: Williamson County GIS, "WCAD Parcels" — parcel geometry and appraisal values from the Williamson Central Appraisal District, ArcGIS map service, layer 0, updated daily, accessed July 1, 2026, https://gis.wilco.org/arcgis/rest/services/public/county_wcad_parcels/MapServer/0.
+[^hayscad]: Hays County Development Services, GIS Division, "Hays County Parcels," ArcGIS feature service, layer 0 (`countygis.DBO.Parcels`), last updated March 2026, accessed July 1, 2026, https://services5.arcgis.com/bVphnK8rPe5MHUSr/arcgis/rest/services/Hays_County_Parcels/FeatureServer/0.
+[^pvs]: Texas Comptroller of Public Accounts, "2024 Appraisal District Ratio Study" (conducted under Tex. Tax Code § 5.10), county worksheets accessed July 1, 2026 — Travis (227): https://comptroller.texas.gov/auto-data/PT2/ratio-study/2024/2270000001A.php; Williamson (246): https://comptroller.texas.gov/auto-data/PT2/ratio-study/2024/2460000001A.php; Hays (105): https://comptroller.texas.gov/auto-data/PT2/ratio-study/2024/1050000001A.php. `PVS_RATIOS = {travis 1.00, williamson 0.96, hays 0.97}` with the per-county ADRS citations in `report_pipeline/v2_county_sources.py`. Applied as `value_per_acre_adj = (market_value / pvs_ratio) / land_acres` at `report_pipeline/13_build_metro_parcels.py`.
 
 ### 4.2 Fire operations (Group B)
 
@@ -129,9 +138,13 @@ For each source: what the agency is, what the dataset is, its vintage, why it's 
 
 | Source | Agency | What it is | Records | Vintage | Why authoritative |
 |---|---|---|---|---|---|
-| **Fire incidents** | **Austin Fire Department**, via the [Austin Open Data Portal](https://data.austintexas.gov/Public-Safety/AFD-Fire-Incidents-2022-2024/v5hh-nyr8) | Per-incident type, response area, location — enriched here with parcel + tract | 20,920 | 2022–2024 | AFD is the dispatching authority; this is its own operational record of every fire call. |
-| **Fire stations** | City of Austin `LOCATION_fire_stations` ArcGIS FeatureServer | Station points with apparatus in `RESOURCES` | 64 AFD | current | The City's authoritative facilities layer (apparatus assignments included). |
-| **Response areas** | City of Austin `BOUNDARIES_afd_response_areas` ArcGIS FeatureServer | First-due operational zones | 765 (285 served) | current | The operational unit AFD itself uses to assign first-due companies. |
+| **Fire incidents** | **Austin Fire Department**, via the [Austin Open Data Portal](https://data.austintexas.gov/Public-Safety/AFD-Fire-Incidents-2023-2025/v5hh-nyr8) | Per-incident type, response area, location — enriched here with parcel + tract | 20,920 | 2022–2024 | AFD is the dispatching authority; this is its own operational record of every fire call.[^afdinc] |
+| **Fire stations** | City of Austin `LOCATION_fire_stations` ArcGIS FeatureServer | Station points with apparatus in `RESOURCES` | 64 AFD | current | The City's authoritative facilities layer (apparatus assignments included).[^stationsrc] |
+| **Response areas** | City of Austin `BOUNDARIES_afd_response_areas` ArcGIS FeatureServer | First-due operational zones | 765 (285 served) | current | The operational unit AFD itself uses to assign first-due companies.[^respsrc] |
+
+[^afdinc]: Austin Fire Department, "AFD Fire Incidents 2023–2025" (dataset ID `v5hh-nyr8`), City of Austin Open Data Portal, updated April 20, 2026, accessed July 1, 2026, https://data.austintexas.gov/Public-Safety/AFD-Fire-Incidents-2023-2025/v5hh-nyr8. The dataset's title rolls forward annually over the same dataset ID; this analysis used the 2022–2024 window, downloaded when the dataset was titled "AFD Fire Incidents 2022–2024."
+[^stationsrc]: City of Austin, "Fire Stations" (`LOCATION_fire_stations`), ArcGIS feature service, accessed July 1, 2026, https://services.arcgis.com/0L95CJ0VTaxqcmED/arcgis/rest/services/LOCATION_fire_stations/FeatureServer.
+[^respsrc]: Austin Fire Department, "AFD Response Areas" (`BOUNDARIES_afd_response_areas`), ArcGIS feature layer, CTM 911 Addressing GIS, accessed July 1, 2026, https://services.arcgis.com/0L95CJ0VTaxqcmED/arcgis/rest/services/BOUNDARIES_afd_response_areas/FeatureServer/0.
 
 ### 4.3 Geography & infrastructure (Group C)
 
@@ -139,9 +152,13 @@ For each source: what the agency is, what the dataset is, its vintage, why it's 
 
 | Source | Agency | What it is | Vintage | Why authoritative |
 |---|---|---|---|---|
-| **Roads** | **US Census Bureau** TIGER/Line | Local road network (interstates excluded) | 2023 | The federal standard geographic road network; consistent nationwide. |
-| **City boundaries** | US Census Bureau cartographic "places" | Incorporated-place polygons (TX) | 2023 | Authoritative municipal boundaries. |
-| **Demographics** | US Census Bureau **ACS 5-year** (B01003 population, B25024 units, B25034 year-built) | Tract-level housing & population | 2022 5-yr | The standard small-area demographic estimates, area-weighted to response areas. |
+| **Roads** | **US Census Bureau** TIGER/Line | Local road network (interstates excluded) | 2023 | The federal standard geographic road network; consistent nationwide.[^tiger] |
+| **City boundaries** | US Census Bureau cartographic "places" | Incorporated-place polygons (TX) | 2023 | Authoritative municipal boundaries.[^cbplaces] |
+| **Demographics** | US Census Bureau **ACS 5-year** (B01003 population, B25024 units, B25034 year-built) | Tract-level housing & population | 2018–2022 5-yr | The standard small-area demographic estimates, area-weighted to response areas.[^acssrc] |
+
+[^tiger]: U.S. Census Bureau, "TIGER/Line Shapefiles: Roads, 2023" (county-based All Roads files), accessed July 1, 2026, https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html. Interstates and other limited-access primary roads are identified for exclusion by MTFCC code `S1100`: U.S. Census Bureau, "Appendix E: MAF/TIGER Feature Class Code (MTFCC) Definitions," in *TIGER/Line Shapefiles 2023 Technical Documentation* (October 2023), https://www2.census.gov/geo/pdfs/maps-data/data/tiger/tgrshp2023/TGRSHP2023_TechDoc.pdf.
+[^cbplaces]: U.S. Census Bureau, "Cartographic Boundary Files: Places, Texas, 1:500,000" (`cb_2023_48_place_500k`; boundaries as of January 1, 2023), accessed July 1, 2026, https://www.census.gov/geographies/mapping-files/time-series/geo/cartographic-boundary.html.
+[^acssrc]: U.S. Census Bureau, "Total Population" (table B01003), "Units in Structure" (table B25024), and "Year Structure Built" (table B25034), American Community Survey 2018–2022 Five-Year Estimates, census-tract level, accessed July 1, 2026, via the Census Bureau API, https://api.census.gov/data/2022/acs/acs5.
 
 ---
 
@@ -159,7 +176,7 @@ Acreage comes from the CAD attribute where present and from the **parcel geometr
 
 > **Worked example.** A downtown parcel worth $40,000,000 on 1.0 acre → **$40,000,000/acre**. A suburban house worth $500,000 on 1.0 acre → **$500,000/acre**. Same footprint; 80× the productivity.
 
-[^acres]: Acreage fallback (CAD acres where positive, else parcel-geometry area in EPSG:2277) is implemented in `build_travis()`, `report_pipeline/13_build_metro_parcels.py`. The roll's `legal_acreage` field sits between the two in the code but in practice fills none of the missing rows — the geometry footprint covers all 51,545 of them.
+[^acres]: Acreage fallback (CAD acres where positive, else parcel-geometry area in EPSG:2277) is implemented in `build_travis()`, `report_pipeline/13_build_metro_parcels.py`. The roll's `legal_acreage` field sits between the two in the code but in practice fills none of the missing rows — the geometry footprint covers all 51,545 of them. Projection: "NAD83 / Texas Central (ftUS)," EPSG:2277, EPSG Geodetic Parameter Dataset (IOGP), accessed July 1, 2026, https://epsg.org/crs_2277/NAD83-Texas-Central-ftUS-.html.
 
 ### 5.2 Revenue
 
@@ -176,7 +193,9 @@ Summed across all 724,639 metro parcels this yields **≈ $12.56 billion/yr** in
 Each model is **calibrated so the metro breaks even in aggregate**, so the output is *who is above/below average*, independent of the exact budget.
 
 - **Model A — cost ∝ land area.** `break_even_per_acre = total_levy / total_acres`; `net_per_acre = tax_per_acre − break_even_per_acre`. The metro-wide break-even is **$8,421/acre**.[^modelA]
-- **Model B — cost ∝ local road-miles** (the Strong Towns "value per road-mile"). Cost is allocated by the local road network each area carries (TIGER roads, excluding state-maintained interstates). This is the better proxy, since public infrastructure cost follows linear feet of road and pipe more closely than raw acreage.
+- **Model B — cost ∝ local road-miles** (the Strong Towns "value per road-mile").[^vprm] Cost is allocated by the local road network each area carries (TIGER roads, excluding state-maintained interstates). This is the better proxy, since public infrastructure cost follows linear feet of road and pipe more closely than raw acreage.
+
+[^vprm]: Marohn, *Strong Towns*; Herriges, "Value Per Acre Analysis" — the road-mile variant normalizes value to the linear infrastructure an area carries rather than its acreage.
 
 > **Worked example (Model A).** A parcel paying $12,000/acre in tax sits **+$3,579/acre above** the $8,421 break-even — a net contributor. One paying $4,000/acre sits **−$4,421/acre below** — cross-subsidized.
 
@@ -204,7 +223,7 @@ The **apparatus-weighted** coverage lens scales each zone's `coverage_share` by 
 
 > **Worked example.** A downtown zone holding 3% of citywide value but generating 1% of weighted calls has `net_demand = (0.03 − 0.01) × $264M = +$5.3M` — it pays in far more than its call volume "uses." Under the **coverage** lens, a spread-out outer zone holding 0.2% of value but consuming `1/285 = 0.35%` of standby has `net_coverage = (0.002 − 0.0035) × $264M = −$0.4M` — a net drain on coverage.
 
-[^budget]: `AFD_BUDGET = 264_000_000` — `notebooks/fire_use_vs_pays.ipynb` cell 2. Validated against the FY2024-25 City of Austin adopted budget in [§11](#11--validation-appendix). It scales the fire dollars only; the relative pattern is budget-invariant.
+[^budget]: City of Austin, *Fiscal Year 2024–25 Approved Budget* (Austin, TX: City of Austin, adopted August 14, 2024), accessed July 1, 2026, https://austin.widen.net/view/pdf/urye2vx23m/FY-2024-25-City-of-Austin-Approved-Budget.pdf. The approved AFD General Fund requirement is **$262,205,476** (pp. 300, 453); the model's `AFD_BUDGET = 264_000_000` (`notebooks/fire_use_vs_pays.ipynb` cell 2) matches the widely reported proposed-budget figure. The constant scales the fire dollars only; the relative pattern is budget-invariant — see [§11](#11--validation-appendix).
 [^net]: Net-balance assembly: `notebooks/fire_use_vs_pays.ipynb` cells 6–10. **Conservation** (`Σ value_share = 1`, each cost share sums to 1, net columns sum ≈ 0) is asserted as a validation check.
 
 ---
@@ -213,9 +232,11 @@ The **apparatus-weighted** coverage lens scales each zone's `coverage_share` by 
 
 ### 6.1 Value per acre — the Urban3 pattern holds
 
-Across **724,639 metro parcels**, value per acre spans four orders of magnitude. Downtown Austin H3 hexes top the metro at **$17–43 million per acre**; the old-town cores of the suburbs (Georgetown Square, Round Rock, San Marcos) stand out as local peaks above their surroundings; the rural fringe and big-lot tracts sit at the bottom. The highest value-per-acre parcels are downtown high-rise office, condos, and hotels; the lowest are large, low-value or undeveloped tracts.
+Across **724,639 metro parcels**, value per acre spans four orders of magnitude. Downtown Austin H3 hexes[^h3] top the metro at **$17–43 million per acre**; the old-town cores of the suburbs (Georgetown Square, Round Rock, San Marcos) stand out as local peaks above their surroundings; the rural fringe and big-lot tracts sit at the bottom. The highest value-per-acre parcels are downtown high-rise office, condos, and hotels; the lowest are large, low-value or undeveloped tracts.
 
 *The value-per-acre surface is best read interactively: it is the extruded "Value per acre (3D)" layer in the companion `outputs/fire_fiscal_interactive_map.html` (and visible in the [§7 map preview](#7--places-you-know)). It regenerates from `parcels_value_per_acre_metro.parquet` via `notebooks/value_per_acre_metro.ipynb`.*
+
+[^h3]: Uber Technologies, *H3: A Hexagonal Hierarchical Geospatial Indexing System*, documentation, accessed July 1, 2026, https://h3geo.org/. Parcels are aggregated to H3 resolution-8 cells for the metro value surface.
 
 ### 6.2 Fiscal productivity — the cost model changes the verdict
 
@@ -277,7 +298,7 @@ To read the fire dollars correctly, it helps to see AFD inside the whole City of
 
 ![Austin Fire Department in the context of the City of Austin FY2024-25 budget](../outputs/fig_afd_vs_city_budget.png)
 
-[^budgetfig]: Figures confirmed via the FY2024-25 City of Austin adopted budget (City Council adoption, Aug 2024). See [§11](#11--validation-appendix) for sources. Built in `report_pipeline/15_build_report_figures.py` (`fig_afd_vs_city_budget`).
+[^budgetfig]: City of Austin, *FY 2024–25 Approved Budget* — $5.9B all-funds; General Fund ≈$1.4B; adopted August 14, 2024. Secondary coverage: Luz Moreno-Lozano, "Austin Adopts Nearly $6 Billion Budget, the Largest in City History," *KUT News*, August 14, 2024, https://www.kut.org/austin/2024-08-14/austin-texas-city-council-5-9-billion-budget-2024-2025-fiscal-year; Laura Figi, "What to Know About Austin's 2024–2025 City Budget," *ATXtoday* (6AM City), August 15, 2024, https://atxtoday.6amcity.com/city/austins-2024-2025-budget. The approved AFD figure is $262.2M; the report's ≈$264M matches the proposed-budget figure (see [§11](#11--validation-appendix)). Built in `report_pipeline/15_build_report_figures.py` (`fig_afd_vs_city_budget`).
 
 ---
 
@@ -365,11 +386,11 @@ The headline numbers pass a machine-generated reconciliation (`notebooks/validat
 
 ![Validation reconciliation table](../outputs/validation_summary.png)
 
-**External-constant sources (independently confirmed via web, June 2026):**
+**External-constant sources (re-verified against the live web, July 1, 2026):**
 
-- City of Austin FY2024-25 adopted budget **$5.9B all funds** ([KUT](https://www.kut.org/austin/2024-08-14/austin-texas-city-council-5-9-billion-budget-2024-2025-fiscal-year)), **General Fund $1.4B** ($1,404.5M base expenditures; [City of Austin Budget Office](https://www.austintexas.gov/budget-excellence/city-budget)). Public-safety departments (Police + Fire + EMS + Forensics) ≈ **mid-60s % of the General Fund** (the report uses 64.8%).
-- AFD budget **≈$263–264M** for FY2024-25 ([ATXtoday budget breakdown](https://atxtoday.6amcity.com/city/austins-2024-2025-budget)) — the second-largest General Fund department, ≈19% of the GF.
-- Blended effective property-tax rate **≈2.1%** — City of Austin + Travis/Williamson/Hays counties + AISD + ACC + special districts, combined effective rate. Used uniformly, so it cancels in every relative comparison.
+- City of Austin FY2024-25 approved budget **$5.9B all funds**, **General Fund ≈$1.4B**: City of Austin, [*Fiscal Year 2024–25 Approved Budget*](https://austin.widen.net/view/pdf/urye2vx23m/FY-2024-25-City-of-Austin-Approved-Budget.pdf) (adopted August 14, 2024; the [Budget Office page](https://www.austintexas.gov/budget-excellence/city-budget) links the current document); Moreno-Lozano, ["Austin Adopts Nearly $6 Billion Budget"](https://www.kut.org/austin/2024-08-14/austin-texas-city-council-5-9-billion-budget-2024-2025-fiscal-year) (*KUT News*, Aug. 14, 2024). Public-safety departments (Police + Fire + EMS + Forensics) ≈ **mid-60s % of the General Fund** (the report uses 64.8%).
+- AFD budget for FY2024-25: **$262.2M approved** (*FY 2024–25 Approved Budget*, pp. 300, 453). The **≈$263–264M** in secondary coverage (Figi, ["What to Know About Austin's 2024–2025 City Budget"](https://atxtoday.6amcity.com/city/austins-2024-2025-budget), *ATXtoday*, Aug. 15, 2024) matches the *proposed* budget; the model's $264M constant scales the fire dollars only. AFD is the second-largest General Fund department, ≈19% of the GF.
+- Blended effective property-tax rate **≈2.1%** — City of Austin + Travis/Williamson/Hays counties + AISD + ACC + special districts. Adopted 2024 rates for the four largest overlapping units sum to ≈1.87% (≈1.98% adding Central Health): Travis County Tax Office, ["Truth in Taxation Summary"](https://www.traviscountytx.gov/tax-rates). The blend's remainder stands in for the other special districts; used uniformly, it cancels in every relative comparison.
 
 ---
 
@@ -469,9 +490,39 @@ Every figure and number regenerates from committed code over public data:
 
 ---
 
-## 14 · References & cross-links
+## 14 · References
 
 For policy context (single-stair building code, HOME initiative, WUI, NFPA 1710, zoning codes) and the operational glossary (AFD, ETJ, ACS, NFIRS, urban-core/inner/outer density thresholds), see **`docs/RESEARCH_CONTEXT.md`**. For the per-field data dictionary, see **`docs/DATA_DICTIONARY.md`**.
+
+### Bibliography
+
+Every external source cited in the notes above, alphabetized. All URLs accessed July 1, 2026.
+
+- Austin Fire Department. "AFD Fire Incidents 2023–2025." City of Austin Open Data Portal, dataset `v5hh-nyr8`. Updated April 20, 2026. https://data.austintexas.gov/Public-Safety/AFD-Fire-Incidents-2023-2025/v5hh-nyr8. (Analyzed over the 2022–2024 window; the dataset title rolls forward annually.)
+- Austin Fire Department. "AFD Response Areas" (`BOUNDARIES_afd_response_areas`). ArcGIS feature layer, CTM 911 Addressing GIS. https://services.arcgis.com/0L95CJ0VTaxqcmED/arcgis/rest/services/BOUNDARIES_afd_response_areas/FeatureServer/0.
+- City of Austin. *Fiscal Year 2024–25 Approved Budget*. Austin, TX: City of Austin, adopted August 14, 2024. https://austin.widen.net/view/pdf/urye2vx23m/FY-2024-25-City-of-Austin-Approved-Budget.pdf.
+- City of Austin. "Fire Stations" (`LOCATION_fire_stations`). ArcGIS feature service. https://services.arcgis.com/0L95CJ0VTaxqcmED/arcgis/rest/services/LOCATION_fire_stations/FeatureServer.
+- City of Austin, Housing and Planning Department. "Land Database Dash View" (2023 Land Database), layer 93. ArcGIS feature service. Last edited May 28, 2026. https://services.arcgis.com/0L95CJ0VTaxqcmED/arcgis/rest/services/2023_Land_Database_Dash_View/FeatureServer/93.
+- Figi, Laura. "What to Know About Austin's 2024–2025 City Budget." *ATXtoday* (6AM City), August 15, 2024. https://atxtoday.6amcity.com/city/austins-2024-2025-budget.
+- Hays County Development Services, GIS Division. "Hays County Parcels." ArcGIS feature service, layer 0. Last updated March 2026. https://services5.arcgis.com/bVphnK8rPe5MHUSr/arcgis/rest/services/Hays_County_Parcels/FeatureServer/0.
+- Herriges, Daniel. "Value Per Acre Analysis: A How-To for Beginners." *Strong Towns*, October 19, 2018. https://www.strongtowns.org/journal/2018/10/19/value-per-acre-analysis-a-how-to-for-beginners.
+- International Association of Oil & Gas Producers. "NAD83 / Texas Central (ftUS): EPSG:2277." EPSG Geodetic Parameter Dataset. https://epsg.org/crs_2277/NAD83-Texas-Central-ftUS-.html.
+- Knight, Steven. "Doing More with Less: Fire Department Budgets, Fiscal Responsibility." *FireRescue1*, August 14, 2018. https://www.firerescue1.com/fire-chief/articles/doing-more-with-less-fire-department-budgets-fiscal-responsibility-GTj33j3axJ2tfshe/.
+- Marohn, Charles L., Jr. *Strong Towns: A Bottom-Up Revolution to Rebuild American Prosperity*. Hoboken, NJ: Wiley, 2019.
+- Minicozzi, Joseph. "The Smart Math of Mixed-Use Development." *Planetizen*, January 23, 2012. https://www.planetizen.com/node/53922.
+- Moreno-Lozano, Luz. "Austin Adopts Nearly $6 Billion Budget, the Largest in City History." *KUT News*, August 14, 2024. https://www.kut.org/austin/2024-08-14/austin-texas-city-council-5-9-billion-budget-2024-2025-fiscal-year.
+- National Fire Protection Association. *NFPA 1710: Standard for the Organization and Deployment of Fire Suppression Operations, Emergency Medical Operations, and Special Operations to the Public by Career Fire Departments*. 2020 ed. Quincy, MA: NFPA, 2020. https://www.nfpa.org/codes-and-standards/nfpa-1710-standard-development/1710. (Consolidated into NFPA 1750 for the 2026 edition.)
+- Pegram, Steve. "Budget Breakdown: The Real Cost of Operating a Fire Department." *FireRescue1*, October 8, 2021. https://www.firerescue1.com/fire-products/administration-billing/articles/budget-breakdown-the-real-cost-of-operating-a-fire-department-uB62rUFtPgUf8ZpZ/.
+- Texas Comptroller of Public Accounts. "2024 Appraisal District Ratio Study." Conducted under Tex. Tax Code § 5.10. County worksheets — Travis (227): https://comptroller.texas.gov/auto-data/PT2/ratio-study/2024/2270000001A.php; Williamson (246): https://comptroller.texas.gov/auto-data/PT2/ratio-study/2024/2460000001A.php; Hays (105): https://comptroller.texas.gov/auto-data/PT2/ratio-study/2024/1050000001A.php.
+- Texas Tax Code. Title 1, Property Tax Code. Texas Constitution and Statutes. https://statutes.capitol.texas.gov/. (Cited in the notes: § 5.10, § 23.23, § 26.01, § 26.16.)
+- Travis Central Appraisal District. "Public Information." 2025 Certified Export (July) — certified appraisal-roll data download. https://traviscad.org/publicinformation/.
+- Travis County Tax Office. "Truth in Taxation Summary." Adopted tax rates for taxing units in Travis County, posted per Tex. Tax Code § 26.16. https://www.traviscountytx.gov/tax-rates.
+- Uber Technologies. *H3: A Hexagonal Hierarchical Geospatial Indexing System*. Documentation. https://h3geo.org/.
+- U.S. Census Bureau. "Appendix E: MAF/TIGER Feature Class Code (MTFCC) Definitions." In *TIGER/Line Shapefiles 2023 Technical Documentation*. October 2023. https://www2.census.gov/geo/pdfs/maps-data/data/tiger/tgrshp2023/TGRSHP2023_TechDoc.pdf.
+- U.S. Census Bureau. "Cartographic Boundary Files: Places, Texas, 1:500,000" (`cb_2023_48_place_500k`). 2023 vintage. https://www.census.gov/geographies/mapping-files/time-series/geo/cartographic-boundary.html.
+- U.S. Census Bureau. "TIGER/Line Shapefiles: Roads, 2023." U.S. Department of Commerce, Geography Division. https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html.
+- U.S. Census Bureau. "Total Population" (B01003), "Units in Structure" (B25024), and "Year Structure Built" (B25034). American Community Survey, 2018–2022 Five-Year Estimates, census-tract level. Via the Census Bureau API: https://api.census.gov/data/2022/acs/acs5.
+- Williamson County GIS. "WCAD Parcels." Parcel geometry and appraisal values from the Williamson Central Appraisal District. ArcGIS map service, layer 0; updated daily. https://gis.wilco.org/arcgis/rest/services/public/county_wcad_parcels/MapServer/0.
 
 ---
 
