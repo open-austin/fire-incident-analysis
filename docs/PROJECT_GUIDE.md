@@ -81,6 +81,7 @@ These can be opened in Excel, Google Sheets, or any spreadsheet program. Located
 | `outputs/REPORT_Austin_Fire_Analysis.md` | The full narrative report with methodology, findings, and policy implications. Can be opened in any text editor or Markdown viewer |
 | `outputs/REPORT_Austin_Fire_Analysis.html` | Same report in HTML format — open in a web browser for formatted reading |
 | `docs/POLICY_BRIEF.md` | Shorter policy brief focused on single-stair and HOME implications |
+| `docs/FIRE_FISCAL_FULL_REPORT.md` | The fire-fiscal master report — who pays for growth across the metro (see [the fire-fiscal pipeline section](#the-fire-fiscal-report-pipeline-newer-work) below) |
 
 ### Detailed Data Files
 
@@ -98,41 +99,96 @@ For anyone who wants to dig into the data directly (in Excel, Google Sheets, or 
 
 Our analysis runs as a series of numbered Python scripts, each building on the last. You don't need to understand the code, but it helps to know the flow:
 
+These scripts live in the `incident_pipeline/` folder and run from the repository root (e.g., `python incident_pipeline/run_all.py` runs the whole thing).
+
 ```
 Step 1: Download Data
-   01_download_data.py
+   incident_pipeline/01_download_data.py
    Pulls fire incidents, boundaries, Census data, and zoning from public APIs
         |
         v
 Step 2: Clean Incidents
-   02_clean_incidents.py
+   incident_pipeline/02_clean_incidents.py
    Fixes dates, removes duplicates, classifies each fire by type
         |
         v
 Step 3: Build Demographics
-   03_create_crosswalk.py
+   incident_pipeline/03_create_crosswalk.py
    Maps Census population/housing data to AFD response areas
         |
         v
 Step 4: Analyze
-   04_analysis.py
+   incident_pipeline/04_analysis.py
    Calculates fire rates, runs statistical tests, produces summary tables
         |
         v
 Step 5: Visualize
-   05_visualize.py
+   incident_pipeline/05_visualize.py
    Creates interactive maps and charts
         |
         v
 Step 6 (optional): Match to Parcels
-   07_parcel_join.py → 08_parcel_analysis.py → 09_zoning_and_census.py
+   legacy/07_parcel_join.py → legacy/08_parcel_analysis.py → legacy/09_zoning_and_census.py
    Matches each fire to a specific property for building-type analysis
         |
         v
 Step 7 (optional): Cause Analysis
-   06_nfirs_cause_analysis.py
+   incident_pipeline/06_nfirs_cause_analysis.py
    Analyzes what caused fires using detailed federal (NFIRS) data
 ```
+
+The parcel-matching scripts (and the townhome cohort analysis, `legacy/10_townhome_cohort_analysis.py`) now live in the `legacy/` folder. They are kept for reference — their outputs are still documented in the [Data Dictionary](DATA_DICTIONARY.md), and the townhome analysis has open follow-up tasks (see `PROJECT_TASKS.md`, tasks 5 and 7).
+
+---
+
+## The Fire-Fiscal Report Pipeline (newer work)
+
+A second, newer line of analysis asks a different question: **does each area generate enough tax revenue to pay for the infrastructure and fire service it consumes?** This work covers the whole Austin metro (Travis, Williamson, and Hays counties — about 725,000 property parcels) and produces its own master report.
+
+The scripts live in the `report_pipeline/` folder and also run from the repository root:
+
+```
+Step 1: Parse property values
+   report_pipeline/12_parse_tcad_roll.py
+   Reads the Travis County (TCAD) certified appraisal roll into per-parcel values
+        |
+        v
+Step 2: Build the metro parcel set
+   report_pipeline/13_build_metro_parcels.py
+   Combines Travis, Williamson, and Hays parcels into one dataset with
+   value-per-acre and modeled tax revenue for every parcel
+        |
+        v
+Step 3: Run the three models (Jupyter notebooks in notebooks/)
+   value_per_acre_metro.ipynb    Value per acre across the metro
+   fiscal_productivity.ipynb     Which cities pay their way (land-cost vs. road-cost models)
+   fire_use_vs_pays.ipynb        Fire service: what each area uses vs. pays in
+        |
+        v
+Step 4: Validate
+   notebooks/validation.ipynb
+   A 24-check reconciliation gate — every headline number is re-derived from
+   source files. Results land in outputs/validation_report.csv (all green = good)
+        |
+        v
+Step 5: Build figures and the report
+   report_pipeline/15_build_report_figures.py   Charts and diagrams
+   report_pipeline/14_build_report_pdf.py       The styled PDF
+```
+
+**Where the outputs land:**
+
+| File | What It Is |
+|------|-----------|
+| `docs/FIRE_FISCAL_FULL_REPORT.md` | The master report — the full narrative with methodology, results, and validation |
+| `outputs/FIRE_FISCAL_FULL_REPORT.pdf` | The same report as a styled PDF (plus an HTML version and a Kindle Scribe edition) |
+| `outputs/fire_fiscal_interactive_map.html` | Interactive 3D map — value per acre and fire net balance, zone by zone |
+| `outputs/city_fiscal_verdicts.csv` | The per-city ledger: revenue, road-miles, and the contributor/drain verdict for 46 cities |
+| `outputs/validation_report.csv` | The 24-check validation results |
+
+Supporting charts (`fiscal_*.png`, `fire_*.png`, `fig_*.png`) also land in `outputs/`. See the [Data Dictionary](DATA_DICTIONARY.md) for column-by-column descriptions of the fiscal datasets.
+
+*(An earlier standalone write-up, `docs/FISCAL_PRODUCTIVITY_REPORT.md`, has been folded into the master report.)*
 
 ---
 

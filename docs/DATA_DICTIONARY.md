@@ -26,7 +26,13 @@ This document describes every dataset produced by the Austin Fire Incident Analy
 3. [NFIRS Cause Analysis Outputs](#nfirs-cause-analysis-outputs)
    - [cause_by_housing_type.csv](#cause_by_housing_typecsv)
    - [heat_source_by_housing.csv](#heat_source_by_housingcsv)
-4. [Key Terms](#key-terms)
+4. [Fire-Fiscal Report Pipeline Artifacts](#fire-fiscal-report-pipeline-artifacts)
+   - [parcels_value_per_acre_metro.parquet](#parcels_value_per_acre_metroparquet-processed_data) — Metro-wide parcel roll with value per acre
+   - [fire_net_balance.geojson](#fire_net_balancegeojson-processed_data) — Fire use-vs-pays balance by response area
+   - [city_fiscal_verdicts.csv](#city_fiscal_verdictscsv-outputs) — Per-city contributor/drain ledger
+   - [colloquial_inventory.csv](#colloquial_inventorycsv-outputs) — Ranked response-area inventory
+   - [validation_report.csv](#validation_reportcsv-outputs) — 24-check validation gate results
+5. [Key Terms](#key-terms)
 
 ---
 
@@ -42,7 +48,7 @@ These are the main datasets our pipeline produces. Each one builds on the previo
 
 **How many records?** 20,934 incidents
 
-**Created by:** `02_clean_incidents.py`
+**Created by:** `incident_pipeline/02_clean_incidents.py`
 
 | Column | What It Means |
 |--------|--------------|
@@ -75,7 +81,7 @@ These are the main datasets our pipeline produces. Each one builds on the previo
 
 **How many records?** 20,921 incidents (99.9% match rate)
 
-**Created by:** `07_parcel_join.py`
+**Created by:** `legacy/07_parcel_join.py`
 
 This file contains all the columns from `incidents_clean.csv` (above), plus:
 
@@ -106,7 +112,7 @@ This file contains all the columns from `incidents_clean.csv` (above), plus:
 
 **How many records?** 20,921 incidents
 
-**Created by:** `09_zoning_and_census.py`
+**Created by:** `legacy/09_zoning_and_census.py`
 
 This file contains all columns from `incidents_with_parcels.csv` (above), plus:
 
@@ -167,7 +173,7 @@ This file contains all columns from `incidents_with_parcels.csv` (above), plus:
 
 **How many records?** 753 response areas (some areas have multiple entries due to overlapping tracts)
 
-**Created by:** `03_create_crosswalk.py`
+**Created by:** `incident_pipeline/03_create_crosswalk.py`
 
 | Column | What It Means |
 |--------|--------------|
@@ -204,7 +210,7 @@ This file contains all columns from `incidents_with_parcels.csv` (above), plus:
 
 **How many records?** 2,642 (each row is one Census tract / response area pair)
 
-**Created by:** `03_create_crosswalk.py`
+**Created by:** `incident_pipeline/03_create_crosswalk.py`
 
 | Column | What It Means |
 |--------|--------------|
@@ -228,7 +234,7 @@ These files contain the results of our analysis — rates, comparisons, and stat
 
 **How many records?** 3 (one per urban class)
 
-**Created by:** `04_analysis.py`
+**Created by:** `incident_pipeline/04_analysis.py`
 
 | Column | What It Means |
 |--------|--------------|
@@ -257,7 +263,7 @@ These files contain the results of our analysis — rates, comparisons, and stat
 
 **How many records?** 4 (one per housing category)
 
-**Created by:** `04_analysis.py`
+**Created by:** `incident_pipeline/04_analysis.py`
 
 | Column | What It Means |
 |--------|--------------|
@@ -279,7 +285,7 @@ These files contain the results of our analysis — rates, comparisons, and stat
 
 **How many records?** 2 (newer vs. older)
 
-**Created by:** `04_analysis.py`
+**Created by:** `incident_pipeline/04_analysis.py`
 
 | Column | What It Means |
 |--------|--------------|
@@ -298,7 +304,7 @@ These files contain the results of our analysis — rates, comparisons, and stat
 
 **What is it?** A count of how many incidents fall into each category (structure fire, vehicle fire, outdoor fire, etc.).
 
-**Created by:** `04_analysis.py`
+**Created by:** `incident_pipeline/04_analysis.py`
 
 ---
 
@@ -308,7 +314,7 @@ These files contain the results of our analysis — rates, comparisons, and stat
 
 **How many records?** 9 building types
 
-**Created by:** `08_parcel_analysis.py`
+**Created by:** `legacy/08_parcel_analysis.py`
 
 | Column | What It Means |
 |--------|--------------|
@@ -329,7 +335,7 @@ These files contain the results of our analysis — rates, comparisons, and stat
 
 **What is it?** Fire rates grouped by when buildings were constructed, using parcel-level data.
 
-**Created by:** `08_parcel_analysis.py`
+**Created by:** `legacy/08_parcel_analysis.py`
 
 ---
 
@@ -343,7 +349,7 @@ These files contain the results of our analysis — rates, comparisons, and stat
 
 **How many records?** 46 incidents
 
-**Created by:** `10_townhome_cohort_analysis.py`
+**Created by:** `legacy/10_townhome_cohort_analysis.py`
 
 **Data quality note:** TCAD's "TOWNHOMES" classification includes 355 multi-unit condo complexes (10-234 units per parcel). True individual townhomes have UNITS <= 1. Filter on the `UNITS` column to distinguish them.
 
@@ -355,7 +361,7 @@ These files contain the results of our analysis — rates, comparisons, and stat
 
 **How many records?** 3 (one per code cohort)
 
-**Created by:** `10_townhome_cohort_analysis.py`
+**Created by:** `legacy/10_townhome_cohort_analysis.py`
 
 **Key finding:** With only 5 structure fires across 3,896 true townhome parcels in 3 years, rates are very low (~1 in 671 parcels/year) but cannot support code cohort comparisons. Would require ~55 years of data at current rates to reach statistical significance.
 
@@ -365,7 +371,7 @@ These files contain the results of our analysis — rates, comparisons, and stat
 
 **What is it?** A comprehensive text summary of the townhome analysis including data quality findings, fire rarity context, national NFPA comparisons, and honest assessment of what the data can and cannot support.
 
-**Created by:** `10_townhome_cohort_analysis.py`
+**Created by:** `legacy/10_townhome_cohort_analysis.py`
 
 ---
 
@@ -379,7 +385,7 @@ These files come from the National Fire Incident Reporting System (NFIRS) data, 
 
 **What is it?** Breaks down fire causes (intentional, unintentional, equipment failure, etc.) comparing multifamily buildings to single-family homes.
 
-**Created by:** `06_nfirs_cause_analysis.py`
+**Created by:** `incident_pipeline/06_nfirs_cause_analysis.py`
 
 ---
 
@@ -387,7 +393,118 @@ These files come from the National Fire Incident Reporting System (NFIRS) data, 
 
 **What is it?** What was the heat source that started the fire — cooking equipment, smoking materials, electrical, heating equipment, or open flame — comparing multifamily to single-family.
 
-**Created by:** `06_nfirs_cause_analysis.py`
+**Created by:** `incident_pipeline/06_nfirs_cause_analysis.py`
+
+---
+
+## Fire-Fiscal Report Pipeline Artifacts
+
+These files come from the fire-fiscal report pipeline (`report_pipeline/` scripts plus the analysis notebooks in `notebooks/`), which asks whether each area generates enough tax revenue to pay for the infrastructure and fire service it consumes. The master write-up is [FIRE_FISCAL_FULL_REPORT.md](FIRE_FISCAL_FULL_REPORT.md) — see its §5 for the full methodology behind every column below.
+
+---
+
+### parcels_value_per_acre_metro.parquet (processed_data)
+
+**What is it?** The metro-wide parcel roll: one row per property parcel across Travis, Williamson, and Hays counties, with its appraised value, size, and value per acre. This is the foundation dataset for the value-per-acre map, the fiscal break-even models, and each area's fire "pays-in." Parquet is a compact data format — open it with pandas/GeoPandas rather than Excel.
+
+**How many records?** 724,639 parcels (373,471 Travis; 265,506 Williamson; 85,662 Hays). Parcels under 0.01 acre or with no positive market value are dropped.
+
+**Created by:** `report_pipeline/13_build_metro_parcels.py` (Travis values parsed from the certified TCAD roll by `report_pipeline/12_parse_tcad_roll.py`; Williamson and Hays fetched from their CAD ArcGIS servers via `report_pipeline/v2_fetch_parcels.py`)
+
+| Column | What It Means |
+|--------|--------------|
+| `county` | Which county appraisal district the parcel comes from: "travis", "williamson", or "hays" |
+| `parcel_id` | The parcel/property ID from that county's appraisal district |
+| `market_value` | The appraisal district's estimated market value of the property (in dollars) |
+| `taxable_value` | The appraised/assessed value used for tax purposes (in dollars) — after caps, before exemptions vary by jurisdiction |
+| `land_acres` | The parcel's size in acres. Uses the CAD's acreage field where present; where the CAD leaves it blank (about 13.8% of Travis parcels), it is filled from the parcel geometry footprint (projected to EPSG:2277) |
+| `land_use` | The land-use category from the source CAD (not populated for Travis roll rows) |
+| `situs_city` | The city of the property's physical (situs) address, per the CAD |
+| `geometry` | The parcel boundary polygon (WGS84 / EPSG:4326) |
+| `value_per_acre` | `market_value / land_acres` — the core fiscal-productivity measure (dollars of value per acre of land) |
+| `pvs_ratio` | The Texas Comptroller Property Value Study median appraisal-to-sale ratio for the county (Travis 1.00, Williamson 0.96, Hays 0.97). Corrects for counties appraising slightly below true market value |
+| `value_per_acre_adj` | `value_per_acre / pvs_ratio` — value per acre adjusted so a dollar means the same thing across all three counties |
+| `tax_per_acre` | `taxable_value × 0.021 / land_acres` — modeled property-tax revenue per acre per year, using the blended 2.1% effective tax rate |
+
+---
+
+### fire_net_balance.geojson (processed_data)
+
+**What is it?** For each AFD response area, the balance between what the area *pays in* toward the fire budget (its share of citywide property value × the ~$264M AFD budget) and what it *uses* — measured two ways. Positive numbers mean the area pays in more than it uses; negative means it is subsidized by the rest of the city. This file feeds the interactive map's fire layer.
+
+**How many records?** 285 served response areas
+
+**Created by:** `notebooks/validation.ipynb` (rebuilt from scratch as a validation check; the analysis itself lives in `notebooks/fire_use_vs_pays.ipynb`)
+
+| Column | What It Means |
+|--------|--------------|
+| `response_area_id` | The AFD response area ID |
+| `RESPONSE_AREA_NAME` | The response area's name (often the same as the ID) |
+| `urban_class` | Density classification: **urban_core**, **inner_suburban**, or **outer_suburban** (from area-weighted Census density) |
+| `net_demand_M` | Net balance under the **demand lens** (cost ∝ weighted fire calls), in millions of dollars per year: `(value_share − callcost_share) × AFD budget`. Positive = pays in more than its call volume "uses" |
+| `net_coverage_M` | Net balance under the **coverage lens** (cost ∝ standby coverage — every served zone consumes an equal slice of readiness), in millions of dollars per year: `(value_share − coverage_share) × AFD budget`. This is the lens that matches how a fire budget actually works (~90% is fixed standby cost) |
+| `geometry` | The response area boundary polygon |
+
+Each of the share columns sums to 1 across all areas, so the net columns each sum to approximately zero — a conservation check asserted in the validation gate.
+
+---
+
+### city_fiscal_verdicts.csv (outputs)
+
+**What is it?** The per-city fiscal ledger behind the report's §6.2: does each incorporated city generate enough tax revenue to cover its infrastructure under two cost models — Model A (cost proportional to land area) and Model B (cost proportional to local road-miles)? Both models are calibrated so the metro breaks even in aggregate, so the verdict says who is above or below average.
+
+**How many records?** 46 cities
+
+**Created by:** `notebooks/fiscal_productivity.ipynb`
+
+| Column | What It Means |
+|--------|--------------|
+| `city` | The incorporated city (Census place) name |
+| `revenue` | Modeled property-tax revenue per year: total market value in the city × the 2.1% effective rate (in dollars) |
+| `acres` | Total parcel acreage in the city |
+| `parcels` | Number of parcels in the city |
+| `road_mi` | Miles of local road the city carries (TIGER roads, interstates excluded) — the cost basis for Model B |
+| `net_land` | Net fiscal balance per acre per year under **Model A** (revenue minus the city's land-area share of cost, divided by acres). Positive = contributor, negative = cross-subsidized |
+| `net_road` | Net fiscal balance per acre per year under **Model B** (revenue minus the city's road-mile share of cost, divided by acres) |
+| `median_home_value` | Median market value of residential-sized parcels (0.05–1.5 acres) in the city — context for the verdict |
+| `verdict` | Plain-language outcome: "contributor under both", "net drain under both", "flips to contributor", or "flips to net drain" (11 cities flip between the two models) |
+
+---
+
+### colloquial_inventory.csv (outputs)
+
+**What is it?** The full ranked inventory of AFD response areas behind the report's §7 "places you know" — each served area's value per acre and its fire net balance, sorted from biggest coverage-lens contributor to biggest drain.
+
+**How many records?** 285 response areas
+
+**Created by:** `report_pipeline/15_build_report_figures.py` (`fig_colloquial_inventory`), by spatially joining the parcel roll to response areas and merging the validated net-balance export
+
+| Column | What It Means |
+|--------|--------------|
+| `response_area_id` | The AFD response area ID |
+| `RESPONSE_AREA_NAME` | The response area's name |
+| `urban_class` | Density classification: urban_core, inner_suburban, or outer_suburban |
+| `net_coverage_M` | Fire net balance under the coverage lens, in $M/year (see [fire_net_balance.geojson](#fire_net_balancegeojson-processed_data)) — the sort key |
+| `net_demand_M` | Fire net balance under the demand lens, in $M/year |
+| `value_per_acre` | Total parcel market value in the area divided by total parcel acreage (dollars per acre) |
+
+---
+
+### validation_report.csv (outputs)
+
+**What is it?** The machine-generated reconciliation gate for the fire-fiscal report: 24 checks that re-derive the report's headline numbers from the source files (incident and parcel counts, value totals, the break-even, the fire net balance, the city verdicts, station distances) plus five citation-log rows recording externally sourced constants (budget figures, the tax rate) with their sources. All 24 checks pass.
+
+**How many records?** 24 checks
+
+**Created by:** `notebooks/validation.ipynb`
+
+| Column | What It Means |
+|--------|--------------|
+| `check` | What is being verified (e.g., "Fire incident count") |
+| `expected` | The number the report claims |
+| `measured` | The number re-derived from the source data on this run |
+| `source` | The file or formula the measured value comes from |
+| `status` | PASS/FAIL for recomputed checks; citation-log rows record the source instead |
 
 ---
 
