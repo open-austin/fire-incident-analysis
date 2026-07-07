@@ -47,7 +47,7 @@ A short definition of each idea the report uses, with a picture. The full [gloss
 ### 2.1 Land value, and market vs. assessed/appraised value
 
 - **Market value** — what an appraisal district estimates a property would sell for. This is the figure we use for revenue, because property tax is levied against value.
-- **Appraised / assessed value** — market value after caps and exemptions (e.g. the 10% homestead cap[^hscap]). Taxes are actually levied on this; we use it for the tax-per-acre lens and market value for the value lens.
+- **Appraised / assessed value** — market value after caps and exemptions (e.g. the 10% homestead cap[^hscap]). Taxes are actually levied on this; we use it for the tax-per-acre lens and market value for the value lens. (The assessed-value `tax_per_acre` column is **Travis-only** in the current build — the Williamson/Hays feeds carry market value only — so every metro-wide dollar figure in this report uses market value.)
 
 So "value" throughout is the appraisal district's estimate of what the land and buildings are worth — the number the tax rate gets multiplied against.
 
@@ -82,7 +82,7 @@ A fire department's cost is mostly **standby**, not response. Roughly **90%** of
 - **Demand** — how many (cost-weighted) calls a zone generates.
 - **Coverage** — the fixed cost of keeping a first-due company able to reach that zone in time.
 
-[^standby]: The ~90% is the fixed-readiness share of a fire budget — overwhelmingly the personnel cost of keeping companies staffed around the clock regardless of call volume. "As public safety is a labor-intensive service model, typically more than 90% of the budget is accounted for by personnel costs": Steven Knight, "Doing More with Less: Fire Department Budgets, Fiscal Responsibility," *FireRescue1*, August 14, 2018, https://www.firerescue1.com/fire-chief/articles/doing-more-with-less-fire-department-budgets-fiscal-responsibility-GTj33j3axJ2tfshe/. For a worked line-item example (>90% non-discretionary once payroll, stations, and apparatus are counted): Steve Pegram, "Budget Breakdown: The Real Cost of Operating a Fire Department," *FireRescue1*, October 8, 2021, https://www.firerescue1.com/fire-products/administration-billing/articles/budget-breakdown-the-real-cost-of-operating-a-fire-department-uB62rUFtPgUf8ZpZ/.
+[^standby]: The cited sources put **personnel** at more than 90% of a fire budget; reading that as *standby* is this report's inference — justified because fire staffing is scheduled by shift, not by call volume, so personnel cost is fixed with respect to demand. "As public safety is a labor-intensive service model, typically more than 90% of the budget is accounted for by personnel costs": Steven Knight, "Doing More with Less: Fire Department Budgets, Fiscal Responsibility," *FireRescue1*, August 14, 2018, https://www.firerescue1.com/fire-chief/articles/doing-more-with-less-fire-department-budgets-fiscal-responsibility-GTj33j3axJ2tfshe/. For a worked line-item example (>90% non-discretionary once payroll, stations, and apparatus are counted): Steve Pegram, "Budget Breakdown: The Real Cost of Operating a Fire Department," *FireRescue1*, October 8, 2021, https://www.firerescue1.com/fire-products/administration-billing/articles/budget-breakdown-the-real-cost-of-operating-a-fire-department-uB62rUFtPgUf8ZpZ/.
 
 [^nfpa]: Response-time coverage benchmarks for career fire departments are set by National Fire Protection Association, *NFPA 1710: Standard for the Organization and Deployment of Fire Suppression Operations, Emergency Medical Operations, and Special Operations to the Public by Career Fire Departments*, 2020 ed. (Quincy, MA: NFPA, 2020), https://www.nfpa.org/codes-and-standards/nfpa-1710-standard-development/1710. NFPA 1710 was consolidated into NFPA 1750 for the 2026 edition; the 2020 edition is the last standalone one.
 
@@ -92,7 +92,7 @@ A quiet outer zone still needs a station that can reach it in time. Most of the 
 
 ### 2.6 Apparatus weighting
 
-Not every call or company costs the same. A full first-alarm structure fire commits far more crew and equipment than a trash fire, and a ladder/quint company costs more to staff than a single engine. We weight incidents by type[^weights] and stations by their actual apparatus[^appw] so the cost lens reflects real resource intensity.
+Not every call or station costs the same. A full first-alarm structure fire commits far more crew and equipment than a trash fire, and a station housing several companies (engine + ladder + rescue) costs more to keep staffed than a single-engine house. We weight incidents by type[^weights] and stations by their actual apparatus[^appw] — the weight sums across a station's units (with a premium for quints), so multi-company houses cost more — and the cost lens reflects real resource intensity.
 
 [^weights]: `WEIGHTS = {structure fire 10, confined 5, vehicle/outdoor 2, trash 1}` — `notebooks/fire_use_vs_pays.ipynb` cell 2. Applied at cell 4. Validated: 20,920 incidents → 65,166 weighted ([§11](#11--validation-appendix)).
 [^appw]: `APP_W = {ENG 1.0, LAD 1.0, QNT 1.2, RES 0.8}`, battalion units 0.5 — `notebooks/fire_use_vs_pays.ipynb` cell 10.
@@ -119,7 +119,7 @@ For each source: what the agency is, what the dataset is, its vintage, why it's 
 
 **What we use it for:** every dollar figure in the report — the value-per-acre map, the fiscal break-even (both cost models), and each area's fire pays-in. Without it there is no revenue side to the ledger.
 
-| Source | Agency | What it is | Records | Vintage | Why authoritative |
+| Source | Agency | What it is | Parcels used (post-filter) | Vintage | Why authoritative |
 |---|---|---|---|---|---|
 | **Travis parcels** | **TCAD** (Travis Central Appraisal District) | Public parcel GIS geometry[^travisgeo] joined to the **2025 Certified Appraisal Roll** (PACS `PROP.TXT` fixed-width export), by `PROP_ID` | 373,471 | 2025 certified | TCAD is the *statutory* appraiser for Travis County (Tex. Property Tax Code). The certified roll is the legal basis for every tax bill in the county.[^tcad] |
 | **Williamson parcels** | **WCAD** via Williamson County GIS ArcGIS FeatureServer | Parcels bundling `TotalPropMktValue` + geometry + `AssessedAc` + use | 265,506 | current cycle | WCAD is the statutory appraiser for Williamson County; the county GIS republishes its certified values.[^wcad] |
@@ -130,7 +130,7 @@ For each source: what the agency is, what the dataset is, its vintage, why it's 
 [^travisgeo]: City of Austin, Housing and Planning Department, "Land Database Dash View" (2023 Land Database), ArcGIS feature service, layer 93 (`main.land_database_reorder`), last edited May 28, 2026, accessed July 1, 2026, https://services.arcgis.com/0L95CJ0VTaxqcmED/arcgis/rest/services/2023_Land_Database_Dash_View/FeatureServer/93. Geometry merged from the Travis, Williamson, Hays, and Bastrop appraisal-district parcel layers; coverage spans Austin's full- and limited-purpose jurisdiction and ETJ.
 [^wcad]: Williamson County GIS, "WCAD Parcels" — parcel geometry and appraisal values from the Williamson Central Appraisal District, ArcGIS map service, layer 0, updated daily, accessed July 1, 2026, https://gis.wilco.org/arcgis/rest/services/public/county_wcad_parcels/MapServer/0.
 [^hayscad]: Hays County Development Services, GIS Division, "Hays County Parcels," ArcGIS feature service, layer 0 (`countygis.DBO.Parcels`), last updated March 2026, accessed July 1, 2026, https://services5.arcgis.com/bVphnK8rPe5MHUSr/arcgis/rest/services/Hays_County_Parcels/FeatureServer/0.
-[^pvs]: Texas Comptroller of Public Accounts, "2024 Appraisal District Ratio Study" (conducted under Tex. Tax Code § 5.10), county worksheets accessed July 1, 2026 — Travis (227): https://comptroller.texas.gov/auto-data/PT2/ratio-study/2024/2270000001A.php; Williamson (246): https://comptroller.texas.gov/auto-data/PT2/ratio-study/2024/2460000001A.php; Hays (105): https://comptroller.texas.gov/auto-data/PT2/ratio-study/2024/1050000001A.php. `PVS_RATIOS = {travis 1.00, williamson 0.96, hays 0.97}` with the per-county ADRS citations in `report_pipeline/v2_county_sources.py`. Applied as `value_per_acre_adj = (market_value / pvs_ratio) / land_acres` at `report_pipeline/13_build_metro_parcels.py`.
+[^pvs]: Texas Comptroller of Public Accounts, "2024 Appraisal District Ratio Study" (conducted under Tex. Tax Code § 5.10), county worksheets accessed July 1, 2026 — Travis (227): https://comptroller.texas.gov/auto-data/PT2/ratio-study/2024/2270000001A.php; Williamson (246): https://comptroller.texas.gov/auto-data/PT2/ratio-study/2024/2460000001A.php; Hays (105), **2022 study** (biennial cycle — 2022 is the most recent for Hays): https://comptroller.texas.gov/auto-data/PT2/ratio-study/2022/1050000001A.php. `PVS_RATIOS = {travis 1.00, williamson 0.96, hays 0.97}` with the per-county ADRS citations in `report_pipeline/v2_county_sources.py`. Applied as `value_per_acre_adj = (market_value / pvs_ratio) / land_acres` at `report_pipeline/13_build_metro_parcels.py`.
 
 ### 4.2 Fire operations (Group B)
 
@@ -172,7 +172,7 @@ Every formula is written out, with a worked example and a footnote pointing to t
 value_per_acre = market_value / land_acres
 ```
 
-Acreage comes from the CAD attribute where present and from the **parcel geometry footprint** (projected to EPSG:2277, Texas Central State Plane) where the CAD leaves it null — which fills in the **13.8%** of Travis parcels (about 18% of platted-lot-size parcels) whose CAD acreage field is empty.[^acres] Values are winsorized at the 99th percentile for display, and parcels under 0.01 acre (data-artifact slivers) are dropped.
+Acreage comes from the CAD attribute where present and from the **parcel geometry footprint** (projected to EPSG:2277, Texas Central State Plane) where the CAD leaves it null — which fills in the **13.8%** of Travis parcels (about 18% of platted-lot-size parcels) whose CAD acreage field is empty.[^acres] For display, extreme values are clipped at high percentiles (95th–99th, varying by figure); in the parcel build itself, parcels under 0.01 acre (data-artifact slivers) and per-acre values outside $1–$10¹²/acre are dropped.
 
 > **Worked example.** A downtown parcel worth $40,000,000 on 1.0 acre → **$40,000,000/acre**. A suburban house worth $500,000 on 1.0 acre → **$500,000/acre**. Same footprint; 80× the productivity.
 
@@ -186,20 +186,20 @@ revenue = market_value × EFFECTIVE_TAX_RATE        (EFFECTIVE_TAX_RATE = 0.021)
 
 Summed across all 724,639 metro parcels this yields **≈ $12.56 billion/yr** in modeled property-tax revenue on **≈ $597.9 billion** of market value.[^rev]
 
-[^rev]: `tax_per_acre = taxable_value × EFFECTIVE_TAX_RATE / land_acres` — `report_pipeline/13_build_metro_parcels.py`. The $597.9B / $12.56B totals are reconciled in [§11](#11--validation-appendix). Note the revenue model applies the rate to **market** value; actual bills are levied on taxable value after caps and exemptions, so $12.56B is the model's calibration total, not a collections forecast — the relative pattern is what carries.
+[^rev]: `revenue = market_value × EFFECTIVE_TAX_RATE` — `notebooks/fiscal_productivity.ipynb` (the rate constant is defined once at `report_pipeline/13_build_metro_parcels.py:22`). The $597.9B / $12.56B totals are reconciled in [§11](#11--validation-appendix). Note the revenue model applies the rate to **market** value; actual bills are levied on taxable value after caps and exemptions, so $12.56B is the model's calibration total, not a collections forecast — the relative pattern is what carries. (A separate `tax_per_acre` column applying the rate to taxable value is built at `13_build_metro_parcels.py:66`, but taxable value is populated for **Travis only** in the current build.)
 
 ### 5.3 Fiscal break-even — two cost models
 
 Each model is **calibrated so the metro breaks even in aggregate**, so the output is *who is above/below average*, independent of the exact budget.
 
-- **Model A — cost ∝ land area.** `break_even_per_acre = total_levy / total_acres`; `net_per_acre = tax_per_acre − break_even_per_acre`. The metro-wide break-even is **$8,421/acre**.[^modelA]
-- **Model B — cost ∝ local road-miles** (the Strong Towns "value per road-mile").[^vprm] Cost is allocated by the local road network each area carries (TIGER roads, excluding state-maintained interstates). This is the better proxy, since public infrastructure cost follows linear feet of road and pipe more closely than raw acreage.
+- **Model A — cost ∝ land area.** `break_even_per_acre = total_levy / total_acres`; `net_per_acre = tax_per_acre − break_even_per_acre`. Over **all** land, rural tracts included, the metro-wide break-even is **$8,421/acre**. For the city-vs-city comparison in [§6.2](#62-fiscal-productivity--the-cost-model-changes-the-verdict) the model is recalibrated on **developed land only** — parcels ≤ 5 acres (`DEVELOPED_ACRE_MAX = 5.0`), which excludes rural/ag tracts — where the break-even rises to **$30,781/acre**; that is the bar the §6.2 verdicts are judged against, and only cities with ≥ 500 covered parcels (`MIN_CITY_PARCELS`) are reported.[^modelA]
+- **Model B — cost ∝ local road-miles** (the Strong Towns "value per road-mile").[^vprm] Cost is allocated by the local road network each area carries (TIGER roads, excluding state-maintained interstates), calibrated the same way: total developed-parcel revenue ÷ total local road-miles across the reported cities gives one cost per road-mile. This is the better proxy, since public infrastructure cost follows linear feet of road and pipe more closely than raw acreage.
 
 [^vprm]: Marohn, *Strong Towns*; Herriges, "Value Per Acre Analysis" — the road-mile variant normalizes value to the linear infrastructure an area carries rather than its acreage.
 
-> **Worked example (Model A).** A parcel paying $12,000/acre in tax sits **+$3,579/acre above** the $8,421 break-even — a net contributor. One paying $4,000/acre sits **−$4,421/acre below** — cross-subsidized.
+> **Worked example (Model A, all-land bar).** A parcel paying $12,000/acre in tax sits **+$3,579/acre above** the $8,421 all-land break-even — a net contributor. One paying $4,000/acre sits **−$4,421/acre below** — cross-subsidized. *(The §6.2 city verdicts use the stricter developed-only bar of $30,781/acre.)*
 
-[^modelA]: Break-even computed in `notebooks/fiscal_productivity.ipynb`; the all-land figure ($8,421/acre) is a validation check in [§11](#11--validation-appendix).
+[^modelA]: Both break-evens computed in `notebooks/fiscal_productivity.ipynb` (`fiscal()`, with `DEVELOPED_ACRE_MAX` and `MIN_CITY_PARCELS` in its Config cell); the all-land figure ($8,421/acre) is a validation check in [§11](#11--validation-appendix).
 
 ### 5.4 Fire service — use vs. pays-in
 
@@ -219,7 +219,7 @@ net_demand    = (value_share − callcost_share)  × AFD_BUDGET
 net_coverage  = (value_share − coverage_share)  × AFD_BUDGET
 ```
 
-The **apparatus-weighted** coverage lens scales each zone's `coverage_share` by its first-due station's apparatus weight. We also compute each zone's **distance to the nearest AFD station** (a `sjoin_nearest` in EPSG:2277) as a direct measure of coverage stretch.[^net]
+The **apparatus-weighted** coverage lens scales each zone's `coverage_share` by the apparatus weight of its **nearest station** — a centroid-to-station `sjoin_nearest` in EPSG:2277, used as a proxy for the true first-due assignment. The same join gives each zone's **distance to the nearest AFD station**, a direct measure of coverage stretch.[^net]
 
 > **Worked example.** A downtown zone holding 3% of citywide value but generating 1% of weighted calls has `net_demand = (0.03 − 0.01) × $264M = +$5.3M` — it pays in far more than its call volume "uses." Under the **coverage** lens, a spread-out outer zone holding 0.2% of value but consuming `1/285 = 0.35%` of standby has `net_coverage = (0.002 − 0.0035) × $264M = −$0.4M` — a net drain on coverage.
 
@@ -240,7 +240,7 @@ Across **724,639 metro parcels**, value per acre spans four orders of magnitude.
 
 ### 6.2 Fiscal productivity — the cost model changes the verdict
 
-Model A charges every area by its land area; Model B charges by the local road-miles it actually carries. Model B is the better proxy, because public infrastructure cost follows linear feet of road and pipe more closely than raw acreage. Switching from A to B sharpens the picture and **flips the verdict for 11 cities** — the deciding variable becomes value per road-mile.
+Model A charges every area by its land area; Model B charges by the local road-miles it actually carries. Both are computed on **developed land only** (parcels ≤ 5 acres) against the $30,781/acre developed break-even — the fair city-vs-suburb test set up in [§5.3](#53-fiscal-break-even--two-cost-models). Model B is the better proxy, because public infrastructure cost follows linear feet of road and pipe more closely than raw acreage. Switching from A to B sharpens the picture and **flips the verdict for 11 cities** — the deciding variable becomes value per road-mile.
 
 What decides a flip is value **per road-mile**, not home value alone. Four road-heavy growth suburbs flip to net drains (Buda, Georgetown, Kyle, Wells Branch); seven flip the other way, to contributor — most of them high-value (Bee Cave, Point Venture, Shady Hollow), but also modest Elgin, which clears the bar because it carries barely five road-miles. The familiar names:[^verdicts]
 
@@ -255,7 +255,7 @@ What decides a flip is value **per road-mile**, not home value alone. Four road-
 | San Marcos | ~$327k | net drain under **both** models |
 | Kyle | ~$315k | **flips to net drain** |
 
-The unincorporated county runs a deficit of about **−$2 billion/yr under both models**, so that gap is genuinely road-heavy, lower-value subdivision — not an artifact of how Model A assumes cost.
+The unincorporated county runs a deficit of about **−$2 billion/yr under both models**. One asymmetry to keep in mind: Model B charges each label for *all* local roads inside it — for "Unincorporated," the whole rural network outside city limits — while its revenue counts only developed (≤ 5-acre) parcels, so Model B's version of that deficit is somewhat overstated. That the same-sized gap also appears under Model A, which has no such asymmetry, is what supports reading it as genuinely road-heavy, lower-value subdivision rather than a cost-model artifact.
 
 [^verdicts]: The full 46-city ledger — revenue, acres, road-miles, both nets, median home value, and verdict — is exported by `notebooks/fiscal_productivity.ipynb` to `outputs/city_fiscal_verdicts.csv`. The 11 verdict-changers: Bee Cave, Elgin, Liberty Hill, Manor, Point Venture, Shady Hollow, Woodcreek (→ contributor); Buda, Georgetown, Kyle, Wells Branch (→ net drain).
 
@@ -265,11 +265,11 @@ The unincorporated county runs a deficit of about **−$2 billion/yr under both 
 
 ### 6.3 Fire service — the same shape, with consumption data
 
-This breaks the 285 served AFD response areas ($263B property value; 20,136 of the 20,920 citywide fire calls) into three area types by density:
+This breaks the 285 served AFD response areas ($263B property value; 20,136 of the 20,920 citywide fire calls) into three area types by **residential population density** (ACS, area-weighted; thresholds in `incident_pipeline/03_create_crosswalk.py` — ≥ 10,000/sq mi = urban core, 3,000–10,000 = inner suburban, < 3,000 = outer suburban):
 
-- **Urban core** — the dense central-city zones (downtown and the older grid).
-- **Inner suburban** — the established neighborhoods ringing the core: moderate density, mostly older housing.
-- **Outer suburban** — the spread-out, newer edge: large lots, long roads, low density.
+- **Urban core** — the densest residential zones. Only **4** of the 285 served zones clear this bar, so this row is small by construction.
+- **Inner suburban** — 139 zones: the established neighborhoods ringing the core, moderate density, mostly older housing. Because the classification counts *residents*, the job-rich, resident-poor **downtown zones land here too** — this row is where the big downtown contributors sit.
+- **Outer suburban** — 140 zones: the spread-out, newer edge — large lots, long roads, low density. (The remaining 2 zones have no ACS classification.)
 
 Depending on which cost lens you use, two of those three switch sign — and that switch is the whole point:
 
@@ -283,7 +283,7 @@ Depending on which cost lens you use, two of those three switch sign — and tha
 
 - **Demand lens:** busy older inner areas generate the most calls, so they look like they "use" the most.
 - **Coverage lens:** this is the lens that matches how a fire budget actually works — about 90% of it is the fixed cost of keeping a staffed company ready, not running calls. On that basis the result **flips**: every spread-out outer-suburban zone still needs its own staffed station but holds only about half the taxable value per zone, so **low-density outer development is the net drain on fire coverage**.
-- **Apparatus-weighting** softens the gap but doesn't close it — outer suburbs are mostly single-engine houses, while inner areas carry the costly ladder/quint companies. The direction holds.
+- **Apparatus-weighting** softens the gap but doesn't close it — outer suburbs are mostly single-engine houses, while inner-area stations house more companies per house (engine plus ladder/quint plus rescue), so they carry more of the standby cost. The direction holds.
 - **Distance** adds a second penalty: outer-suburban zones sit a median **1.2 miles** from the nearest station versus **0.8** for inner ones (worst cases over 5 miles) — costlier to cover *and* slower to reach.
 
 You can see this zone by zone on the map in [§7](#7--places-you-know), and interactively in the companion `fire_fiscal_interactive_map.html`.
@@ -321,7 +321,7 @@ The numbers are easier to trust against places you can actually picture. The com
 | **Kyle / Buda** | fast-growing outer suburbs | **net drains** — lots of pavement per dollar of value |
 | **San Marcos** | outer-metro college town | net drain under **both** cost models; local square is a peak |
 
-Below the named landmarks sits the **exact ranking** — the AFD response areas (by their operational zone code and urban class) that contribute and drain the most under the coverage lens, with each zone's measured value per acre. The pattern is strong though not airtight: the top four contributors are very high-value zones ($20–46M/acre), led by the downtown zone, while the fifth is a populous low-value outer zone — and every one of the biggest drains is a low-value outer/inner-suburban zone. The drains cluster near **−$0.93M** because that is the floor — a zone holding almost no taxable value still consumes one zone's share of standby (`1/285 × $264M`).
+Below the named landmarks sits the **exact ranking** — the AFD response areas (by their operational zone code and urban class) that contribute and drain the most under the coverage lens, with each zone's measured value per acre. The pattern is strong though not airtight: the top four contributors are very high-value zones ($20–46M/acre), led by the downtown zone (classed *inner suburban* by the residential-density scheme — see [§6.3](#63-fire-service--the-same-shape-with-consumption-data)), while the fifth is a populous low-value outer zone — and every one of the biggest drains is a low-value outer/inner-suburban zone. The drains cluster near **−$0.93M** because that is the floor — a zone holding almost no taxable value still consumes one zone's share of standby (`1/285 × $264M`).
 
 ![Ranked inventory — AFD response areas by value-per-acre and fire net balance (coverage lens)](../outputs/fig_colloquial_inventory.png)
 
@@ -346,7 +346,7 @@ These come from **different agencies, in different units, by different methods**
 - **Calibration, not budgets.** Both fiscal cost models are calibrated to break even metro-wide, not to actual municipal expenditure; absolute dollars are first-order. The AFD budget figure scales the fire dollars only — it does not affect the relative pattern.
 - **Tax rate.** A blended ~2.1% effective rate is used; real per-jurisdiction rates vary, but a uniform rate cancels in the relative comparison.
 - **Fire scope.** AFD / City of Austin only. Suburban **ESD** fire departments run separate departments with no comparable open incident data, so they are stated as out of scope rather than silently dropped; **fire calls only — EMS/medical excluded**; three years (2022–2024). Pays-in denominators count **Travis parcels only**, so the few served zones spilling into Williamson/Hays have their value — and hence pays-in — modestly understated.
-- **Infrastructure proxy.** Road-miles omit water/sewer line-miles and service frequency; apparatus weighting omits crew-shift detail. Coverage cost allocated per first-due zone.
+- **Infrastructure proxy.** Road-miles omit water/sewer line-miles and service frequency; apparatus weighting omits crew-shift detail and assigns each zone its *nearest* station as a proxy for first-due. Coverage cost allocated per zone. The §6.2 city ledger counts all local roads inside each label but only developed-parcel (≤ 5-acre) revenue — an asymmetry that overstates the road-cost deficit of the unincorporated area (see §6.2).
 - **Vintage mix.** Travis values are 2025 certified; Williamson/Hays are their current published cycle. All ~2025; not identically dated.
 
 Each of these affects how big the numbers are, not which way they point — which is why the three-way agreement still carries the conclusion.
@@ -413,7 +413,7 @@ Extends the 21-term glossary in `docs/RESEARCH_CONTEXT.md` with the financial co
 | **Apparatus weighting** | Scaling cost by the actual equipment/crew committed (ladder/quint > engine; structure fire > trash). |
 | **Net balance** | pays-in − use, in $/yr; positive = net contributor, negative = net drain. |
 | **PVS / sales ratio** | Comptroller's median appraisal-to-sale ratio, used to make values comparable across counties. |
-| **Winsorize** | Cap a distribution at a percentile (99th here) so extreme outliers don't distort display scales. |
+| **Winsorize** | Cap a distribution at a percentile (95th–99th here, varying by figure) so extreme outliers don't distort display scales. |
 | **H3 hexagon** | Uber's hexagonal spatial index; parcels are aggregated to H3 res-8 cells for the metro value map. |
 | **Response area** | AFD's first-due operational zone (765 total, 285 served by ≥1 call + value). |
 | **EPSG:2277** | Texas Central State Plane (feet) — the projected CRS used for areas and distances. |
@@ -437,7 +437,8 @@ MODEL 1 — value per acre
 MODEL 2 — fiscal break-even
   revenue        = Σ market_value × 0.021
   # Model A: cost ∝ area
-  break_even/ac  = revenue / Σ acres
+  break_even/ac  = revenue / Σ acres        # all land: $8,421/ac
+  # §6.2 city table: recalibrated on developed land only (parcels ≤ 5 ac) → $30,781/ac
   net/ac         = value × 0.021 / acres − break_even/ac
   # Model B: cost ∝ local road-miles (TIGER, no interstates)
   cost_share     = area_road_miles / Σ road_miles
@@ -513,7 +514,7 @@ Every external source cited in the notes above, alphabetized. All URLs accessed 
 - Moreno-Lozano, Luz. "Austin Adopts Nearly $6 Billion Budget, the Largest in City History." *KUT News*, August 14, 2024. https://www.kut.org/austin/2024-08-14/austin-texas-city-council-5-9-billion-budget-2024-2025-fiscal-year.
 - National Fire Protection Association. *NFPA 1710: Standard for the Organization and Deployment of Fire Suppression Operations, Emergency Medical Operations, and Special Operations to the Public by Career Fire Departments*. 2020 ed. Quincy, MA: NFPA, 2020. https://www.nfpa.org/codes-and-standards/nfpa-1710-standard-development/1710. (Consolidated into NFPA 1750 for the 2026 edition.)
 - Pegram, Steve. "Budget Breakdown: The Real Cost of Operating a Fire Department." *FireRescue1*, October 8, 2021. https://www.firerescue1.com/fire-products/administration-billing/articles/budget-breakdown-the-real-cost-of-operating-a-fire-department-uB62rUFtPgUf8ZpZ/.
-- Texas Comptroller of Public Accounts. "2024 Appraisal District Ratio Study." Conducted under Tex. Tax Code § 5.10. County worksheets — Travis (227): https://comptroller.texas.gov/auto-data/PT2/ratio-study/2024/2270000001A.php; Williamson (246): https://comptroller.texas.gov/auto-data/PT2/ratio-study/2024/2460000001A.php; Hays (105): https://comptroller.texas.gov/auto-data/PT2/ratio-study/2024/1050000001A.php.
+- Texas Comptroller of Public Accounts. "2024 Appraisal District Ratio Study." Conducted under Tex. Tax Code § 5.10. County worksheets — Travis (227): https://comptroller.texas.gov/auto-data/PT2/ratio-study/2024/2270000001A.php; Williamson (246): https://comptroller.texas.gov/auto-data/PT2/ratio-study/2024/2460000001A.php; Hays (105), 2022 study (biennial cycle): https://comptroller.texas.gov/auto-data/PT2/ratio-study/2022/1050000001A.php.
 - Texas Tax Code. Title 1, Property Tax Code. Texas Constitution and Statutes. https://statutes.capitol.texas.gov/. (Cited in the notes: § 5.10, § 23.23, § 26.01, § 26.16.)
 - Travis Central Appraisal District. "Public Information." 2025 Certified Export (July) — certified appraisal-roll data download. https://traviscad.org/publicinformation/.
 - Travis County Tax Office. "Truth in Taxation Summary." Adopted tax rates for taxing units in Travis County, posted per Tex. Tax Code § 26.16. https://www.traviscountytx.gov/tax-rates.
@@ -530,11 +531,14 @@ Every external source cited in the notes above, alphabetized. All URLs accessed 
 
 <div class="unfinished-banner">UNFINISHED</div>
 
-> **This page is a worklist, not a finding.** The July 1, 2026 source-verification pass surfaced three places where a verified source disagrees with a constant the report uses. Each is disclosed at its footnote; **none has been resolved in the numbers yet.**
+> **This page is a worklist, not a finding.** The July 1, 2026 source-verification pass surfaced three places (items 1–3) where a verified source disagrees with a constant the report uses; a July 7, 2026 code-vs-claims review added three more (items 4–6) where a modeling choice should be revisited in the numbers. Each is disclosed at its footnote or section; **none has been resolved in the numbers yet.**
 
 1. **Soften the blended tax rate (~2.1% → ~2.0%)?** The adopted 2024 rates for the four largest overlapping jurisdictions sum to ≈1.87% (≈1.98% adding Central Health) per the Travis County Tax Office "Truth in Taxation Summary" — the report's 2.1% blend sits above what the documented rates support. A uniform rate cancels in every relative comparison, so only the absolute dollar figures would rescale. (Disclosed at the §2.3 rate note.)
 2. **Decide the AFD budget constant: $264M (proposed) vs $262.2M (approved).** The *FY 2024–25 Approved Budget* puts AFD's General Fund requirement at $262,205,476; the model's `AFD_BUDGET = 264_000_000` matches the widely reported *proposed* figure. Switching rescales every fire dollar by ~0.7%; the pattern is unchanged. (Disclosed at the §5.4 budget note.)
 3. **Pin the fire-incident vintage before any re-pull.** Open-data dataset `v5hh-nyr8` now carries the rolling title "AFD Fire Incidents 2023–2025"; this analysis used the 2022–2024 window. A re-download today would silently swap the incident set — archive the analyzed extract or filter by date on refresh. (Disclosed at the §4.2 incidents note.)
+4. **Consider a ladder premium in the apparatus weights.** `APP_W` currently weighs a ladder the same as an engine (`LAD 1.0 = ENG 1.0`; only quints carry a premium) — the inner-area apparatus effect comes from stations housing more units, not costlier ones. If a ladder company genuinely costs more to staff, raise `LAD` above 1.0 in `notebooks/fire_use_vs_pays.ipynb` cell 10 and re-run; §2.6/§6.3 prose now describes the weighting as implemented. (Disclosed at §2.6.)
+5. **Populate `taxable_value` for Williamson/Hays, or retire the metro tax-per-acre framing.** The assessed-value column is Travis-only (`13_build_metro_parcels.py` fills it from the TCAD roll's `appraised_val`; the Williamson/Hays feeds carry market value only), so `tax_per_acre` is NaN outside Travis. (Disclosed at §2.1 and the §5.2 revenue note.)
+6. **Sensitivity-check the Model B unincorporated asymmetry.** The road-cost ledger charges "Unincorporated" for every local road outside city limits but counts only its ≤ 5-acre parcel revenue. Re-run including large-parcel revenue (or clipping rural roads) to bound how much of the −$2B road-cost deficit the asymmetry explains. (Disclosed at §6.2 and §9.)
 
 ---
 
