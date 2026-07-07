@@ -45,6 +45,12 @@ POPULATION_VARS = {
     "NAME": "Census tract name"
 }
 
+URBAN_CLASS = {
+        0: "OUTER_SUBURBAN",
+        3000: "INNER_SUBURBAN",
+        10000: "URBAN_CORE",
+}
+
 INCOME_VARS = {
     "S1901_C01_001E": "Estimate!!Households!!Total",
     "S1901_C01_001M": "Margin of Error!!Households!!Total",
