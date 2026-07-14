@@ -95,7 +95,7 @@ A quiet outer zone still needs a station that can reach it in time. Most of the 
 Not every call or station costs the same. A full first-alarm structure fire commits far more crew and equipment than a trash fire, and a station housing several companies (engine + ladder + rescue) costs more to keep staffed than a single-engine house. We weight incidents by type[^weights] and stations by their actual apparatus[^appw] — the weight sums across a station's units (with a premium for quints), so multi-company houses cost more — and the cost lens reflects real resource intensity.
 
 [^weights]: `WEIGHTS = {structure fire 10, confined 5, vehicle/outdoor 2, trash 1}` — `notebooks/fire_use_vs_pays.ipynb` cell 2. Applied at cell 4. Validated: 20,920 incidents → 65,166 weighted ([§11](#11--validation-appendix)).
-[^appw]: `APP_W = {ENG 1.0, LAD 1.0, QNT 1.2, RES 0.8}`, battalion units 0.5 — `notebooks/fire_use_vs_pays.ipynb` cell 10.
+[^appw]: **Apparatus** are the staffed vehicles a fire station houses — engines (pumpers), ladders/aerials, quints, and rescue units; a *company* is the crew assigned to one such unit. For an overview, see "Firefighting apparatus," Wikipedia, https://en.wikipedia.org/wiki/Firefighting_apparatus. Weights: `APP_W = {ENG 1.0, LAD 1.0, QNT 1.2, RES 0.8}`, battalion units 0.5 — `notebooks/fire_use_vs_pays.ipynb` cell 10.
 
 ---
 
@@ -195,7 +195,7 @@ Each model is **calibrated so the metro breaks even in aggregate**, so the outpu
 - **Model A — cost ∝ land area.** `break_even_per_acre = total_levy / total_acres`; `net_per_acre = tax_per_acre − break_even_per_acre`. Over **all** land, rural tracts included, the metro-wide break-even is **$8,421/acre**. For the city-vs-city comparison in [§6.2](#62-fiscal-productivity--the-cost-model-changes-the-verdict) the model is recalibrated on **developed land only** — parcels ≤ 5 acres (`DEVELOPED_ACRE_MAX = 5.0`), which excludes rural/ag tracts — where the break-even rises to **$30,781/acre**; that is the bar the §6.2 verdicts are judged against, and only cities with ≥ 500 covered parcels (`MIN_CITY_PARCELS`) are reported.[^modelA]
 - **Model B — cost ∝ local road-miles** (the Strong Towns "value per road-mile").[^vprm] Cost is allocated by the local road network each area carries (TIGER roads, excluding state-maintained interstates), calibrated the same way: total developed-parcel revenue ÷ total local road-miles across the reported cities gives one cost per road-mile. This is the better proxy, since public infrastructure cost follows linear feet of road and pipe more closely than raw acreage.
 
-[^vprm]: Marohn, *Strong Towns*; Herriges, "Value Per Acre Analysis" — the road-mile variant normalizes value to the linear infrastructure an area carries rather than its acreage.
+[^vprm]: Charles L. Marohn Jr., *Strong Towns: A Bottom-Up Revolution to Rebuild American Prosperity* (Hoboken, NJ: Wiley, 2019); Daniel Herriges, "Value Per Acre Analysis: A How-To for Beginners," *Strong Towns*, October 19, 2018, https://www.strongtowns.org/journal/2018/10/19/value-per-acre-analysis-a-how-to-for-beginners — the road-mile variant normalizes value to the linear infrastructure an area carries rather than its acreage. Full citations in the [bibliography](#bibliography).
 
 > **Worked example (Model A, all-land bar).** A parcel paying $12,000/acre in tax sits **+$3,579/acre above** the $8,421 all-land break-even — a net contributor. One paying $4,000/acre sits **−$4,421/acre below** — cross-subsidized. *(The §6.2 city verdicts use the stricter developed-only bar of $30,781/acre.)*
 
@@ -214,12 +214,12 @@ with `AFD_BUDGET ≈ $264M`.[^budget] **Use** is measured three ways:
 ```
 value_share     = prop_value / Σ prop_value
 callcost_share  = weighted_calls / Σ weighted_calls          # demand lens
-coverage_share  = 1 / N_served_areas                          # flat coverage lens
+coverage_share  = 1 / N_served_areas                          # flat coverage lens: budget split evenly across served response areas
 net_demand    = (value_share − callcost_share)  × AFD_BUDGET
 net_coverage  = (value_share − coverage_share)  × AFD_BUDGET
 ```
 
-The **apparatus-weighted** coverage lens scales each zone's `coverage_share` by the apparatus weight of its **nearest station** — a centroid-to-station `sjoin_nearest` in EPSG:2277, used as a proxy for the true first-due assignment. The same join gives each zone's **distance to the nearest AFD station**, a direct measure of coverage stretch.[^net]
+Here `N_served_areas` is the number of **served AFD response areas** — the ~285 response areas (of 765 total) that carry both property value and weighted calls after filtering. AFD response areas are the department's own operational dispatch boxes (from `raw_data/afd_response_areas.geojson`), with census demographics allocated onto them by an area-weighted tract→response-area crosswalk; they are *not* census tracts, and a response area is *not* a fire company (there are 64 AFD stations, far fewer than 285 areas). The **flat** coverage lens therefore is not "one company per area" — it is a deliberately simple floor that spreads the standby budget **evenly across served areas**, on the premise that every area needs first-due reach. The **apparatus-weighted** coverage lens refines this: it scales each zone's `coverage_share` by the apparatus weight of its **nearest station** — a centroid-to-station `sjoin_nearest` in EPSG:2277, used as a proxy for the true first-due assignment. The same join gives each zone's **distance to the nearest AFD station**, a direct measure of coverage stretch.[^net]
 
 > **Worked example.** A downtown zone holding 3% of citywide value but generating 1% of weighted calls has `net_demand = (0.03 − 0.01) × $264M = +$5.3M` — it pays in far more than its call volume "uses." Under the **coverage** lens, a spread-out outer zone holding 0.2% of value but consuming `1/285 = 0.35%` of standby has `net_coverage = (0.002 − 0.0035) × $264M = −$0.4M` — a net drain on coverage.
 
@@ -470,7 +470,7 @@ g["tax_per_acre"] = g["taxable_value"] * EFFECTIVE_TAX_RATE / g["land_acres"]
 ```python
 t['value_share']    = t['prop_value'] / t['prop_value'].sum()
 t['callcost_share'] = t['wcalls']     / t['wcalls'].sum()
-t['coverage_share'] = 1.0 / len(t)     # each zone = one staffed company
+t['coverage_share'] = 1.0 / len(t)     # flat floor: standby budget split evenly across served response areas
 t['net_demand_M']   = (t['value_share'] - t['callcost_share']) * AFD_BUDGET / 1e6
 t['net_coverage_M'] = (t['value_share'] - t['coverage_share']) * AFD_BUDGET / 1e6
 ```
