@@ -4,7 +4,7 @@ A neutral, data-backed guide for working through the review feedback together. E
 
 - **Report:** Fire-Fiscal Master (PR #13) · **Review:** Issue #14 · **Figures:** from repo outputs, 2026-07-14
 - **How to use:** take the four items in order. Read the finding, weigh the two directions, mark a decision.
-- Figures are measurements from the project's own data; named suggestions paraphrase the written review. The decisions are the group's to make. A print-ready version is at [`pr13-decision-handout.html`](pr13-decision-handout.html).
+- Figures are measurements from the project's own data; named suggestions paraphrase the written review. The decisions are the group's to make. A print-ready version is at [`handout.html`](handout.html).
 
 ---
 
@@ -107,7 +107,7 @@ Decided: ____________________
 
 ## Methods & provenance
 
-Every figure above is traceable — source data, formula, and a reproduction step are recorded in **[`docs/METHODS.md`](METHODS.md)**. Quick map:
+Every figure above is traceable — source data, formula, and a reproduction step are recorded in **[`docs/METHODS.md`](../../METHODS.md)**. Quick map:
 
 | Figure (this handout) | Provenance entry |
 |---|---|

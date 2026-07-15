@@ -31,7 +31,7 @@ For each claim, record these four things:
 ## Ledger
 
 ### Weighted fire demand by category
-*(used in: `docs/pr13-decision-handout.md` §A, `docs/FIRE_FISCAL_FULL_REPORT.md` §2.6 / §5.4)*
+*(used in: `docs/working/pr13/handout.md` §A, `docs/FIRE_FISCAL_FULL_REPORT.md` §2.6 / §5.4)*
 
 - **Claim.** Vehicle+outdoor+trash fires are 31.9% of weighted demand (65,166 total) though 73% of the 20,920 incident records; category shares 48.7 / 19.3 / 14.8 / 10.4 / 6.7 / 0.0%.
 - **Source.** `processed_data/incidents_enriched.csv`, column `incident_category` (one row per incident; `responsearea` used when aggregating per area).
@@ -52,7 +52,7 @@ For each claim, record these four things:
   Canonical definition: `notebooks/fire_use_vs_pays.ipynb` cells 2 (weights) and 4 (applied).
 
 ### Cost-model verdict agreement (road-mile vs land)
-*(used in: `docs/pr13-decision-handout.md` §B)*
+*(used in: `docs/working/pr13/handout.md` §B)*
 
 - **Claim.** 35 of 46 cities (76%) keep the same verdict under both cost models; 11 flip; correlation r = 0.85; unincorporated county −16,098 (land) vs −15,999 (road) per acre.
 - **Source.** `outputs/city_fiscal_verdicts.csv`, columns `net_land`, `net_road`, `city`.
@@ -69,12 +69,12 @@ For each claim, record these four things:
   ```
 
 ### Non-structure demand by area type
-*(used in: `docs/pr13-decision-handout.md` §A)*
+*(used in: `docs/working/pr13/handout.md` §A)*
 
 - **Claim.** Non-structure fires are 23.9% of urban_core demand, 31.4% inner_suburban, 36.4% outer_suburban; removing them shifts urban_core's share of total demand 3.4→3.8% and outer_suburban 21.4→20.0%.
 - **Source.** `processed_data/incidents_enriched.csv` (`responsearea`, `incident_category`) joined to `processed_data/response_areas_final.geojson` (`response_area_id`, `urban_class`).
 - **Formula.** Per response area, sum weighted demand (as above) for all fires vs. structure-only (excluding Vehicle/Outdoor/Trash); group by `urban_class`; compare each class's share of the all-fires total vs the structure-only total.
-- **Reproduce.** See `docs/pr13-decision-handout.html` methods note, or the snippet in the decision-memo journal note.
+- **Reproduce.** See `docs/working/pr13/handout.html` methods note, or the snippet in the decision-memo journal note.
 
 ### Revenue definition
 *(used throughout the fiscal report and handout §C)*
