@@ -65,15 +65,15 @@ Two parcels can sit on the same acre — same road, same pipe, same area to cove
 
 Revenue is `value × an effective tax rate`. The **effective** rate blends every overlapping jurisdiction — City of Austin, the county, the school district (AISD), the community college (ACC), and special districts — into one number applied to market value. We use a blended **~2.1%**.[^rate] A uniform rate **cancels** in any relative (above/below average) comparison, so the *pattern* does not depend on getting the rate exactly right — only the absolute dollars do.
 
+Because revenue is simply value scaled by this single rate, **value per acre and revenue per acre rank every area identically** — they are the same measurement in two different units, never a different result. To keep that clear, this report uses **value per acre** as its one productivity lens throughout, and reports **revenue in dollars** only where an absolute amount is needed (the fire use-vs-pays-in in §5.4, the city ledger in §6.2). Reflecting the tax breaks that lower an individual home's *actual* bill would require per-parcel taxable value, which is Travis-only in the current build (see [§2.1](#21-land-value-and-market-vs-assessedappraised-value)); provenance for the revenue definition is in [`docs/METHODS.md`](METHODS.md).
+
 [^rate]: Adopted 2024 (FY2024-25) rates per $100 of value — City of Austin 0.4776, Travis County 0.3444, Austin ISD 0.9505, Austin Community College 0.1013 (≈1.87% combined; ≈1.98% adding Central Health): Travis County Tax Office, "Truth in Taxation Summary" (posted under Tex. Tax Code § 26.16), accessed July 1, 2026, https://www.traviscountytx.gov/tax-rates. The model's 2.1% blend sits slightly above that sum to stand in for the remaining special districts; because the rate is applied uniformly, any error in it cancels in every relative comparison. `EFFECTIVE_TAX_RATE = 0.021` is defined once at `report_pipeline/13_build_metro_parcels.py:22` and reused everywhere — see [§11](#11--validation-appendix).
 
-### 2.4 Fiscal productivity & break-even
+### 2.4 How to read this report: the break-even line
 
-An area **breaks even** when its revenue equals its cost-to-serve. Above the line it is a **net contributor**; below it, it is **cross-subsidized** by other areas.
+One test runs through every result below. An area **pays in** — revenue, which rises with its value — and **costs** something to serve, which is roughly flat per acre. Where those two meet is **break-even**: above it an area is a **net contributor**; below it, it is **cross-subsidized** by the areas above. Who sits above the line and who sits below is the whole report.
 
 ![Revenue rises with value; cost-to-serve is roughly flat per acre — they cross at the break-even value per acre](../outputs/fig_concept_breakeven.png)
-
-Plot what an area pays in against what it costs to serve. Where the two lines cross is break-even. The whole report is really about who sits above that line and who sits below.
 
 ### 2.5 Fire coverage vs. fire demand
 
