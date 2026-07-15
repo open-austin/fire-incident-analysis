@@ -103,4 +103,17 @@ Decided: ____________________
 | C | Uniform rate → identical rankings; exemption effect needs per-parcel taxable value (Travis-only) | Clarify wording · Scope later |
 | D | Introduces the break-even frame used throughout the report | Revise to a callout · Cut |
 
-*Figures computed from the project's own outputs — `incidents_enriched.csv` and `outputs/city_fiscal_verdicts.csv` — on 2026-07-14. Named suggestions paraphrase the written PR13 review (Issue #14).*
+---
+
+## Methods & provenance
+
+Every figure above is traceable — source data, formula, and a reproduction step are recorded in **[`docs/METHODS.md`](METHODS.md)**. Quick map:
+
+| Figure (this handout) | Provenance entry |
+|---|---|
+| §A weighted demand by category (48.7% … 31.9%; 65,166 total) | METHODS → *Weighted fire demand by category* |
+| §A non-structure share by area type (23.9 / 31.4 / 36.4%) | METHODS → *Non-structure demand by area type* |
+| §B 76% agreement, r = 0.85, −16,098 vs −15,999 | METHODS → *Cost-model verdict agreement* |
+| §C `revenue = value × 0.021`, identical rankings | METHODS → *Revenue definition* |
+
+*Figures computed from the project's own outputs on 2026-07-14. Named suggestions paraphrase the written PR13 review (Issue #14).*

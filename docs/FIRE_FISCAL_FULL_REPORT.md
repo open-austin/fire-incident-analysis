@@ -4,7 +4,7 @@
 
 **Prepared by:** Austin Housing & Land Use Working Group — Research Hub
 **Date:** June 2026 · **Analysis vintage:** 2025 appraisal values · 2022–2024 fire incidents
-**Companion artifacts:** `outputs/fire_fiscal_interactive_map.html` (interactive 3D map) · `outputs/validation_report.csv` (data validation gate)
+**Companion artifacts:** `outputs/fire_fiscal_interactive_map.html` (interactive 3D map) · `outputs/validation_report.csv` (data validation gate) · [`docs/METHODS.md`](METHODS.md) (data-provenance standard & claim ledger)
 
 ---
 
@@ -381,6 +381,8 @@ Color is a shortcut, not the only signal: the two ends of the diverging scale ca
 ---
 
 ## 11 · Validation appendix
+
+**Provenance standard.** No number in this report ships without its source, formula, and a reproduction step. Most are recomputed by the machine reconciliation below; the source data, transformation, and a copy-paste reproduction for each headline claim are consolidated in [`docs/METHODS.md`](METHODS.md) (the provenance ledger), and individual figures cite their notebook cell / script line in footnotes throughout.
 
 The headline numbers pass a machine-generated reconciliation (`notebooks/validation.ipynb` → `outputs/validation_report.csv`). **All 24 checks are green.** The table has two kinds of row and is explicit about which is which: the **recomputed checks** re-derive their numbers from the source files on every run — incident and parcel counts, totals, the break-even, the fire net-balance (rebuilt from scratch rather than read from the analysis notebook), the §6.2 city verdicts, the §6.3 class table, and station distances, all against the full 724,639-parcel roll — while the five **citation-log rows** record the externally sourced constants (budget figures, tax rate) with their sources rather than measuring them. The net-balance conservation check holds to machine precision (`1.1e-16`), and the run also exports `processed_data/fire_net_balance.geojson` that feeds the interactive map's fire layer.
 
